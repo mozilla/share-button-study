@@ -3,13 +3,49 @@ Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/Console.jsm");
 Cu.import("resource://gre/modules/AppConstants.jsm");
 
-const CSS_URI = Services.io.newURI("resource://share-button-study/share_button.css");
+const SHAREBUTTON_CSS_URI = Services.io.newURI("resource://share-button-study/share_button.css");
+const PANEL_CSS_URI = Services.io.newURI("resource://share-button-study/panel.css");
 const browserWindowWeakMap = new WeakMap();
+
+function doorhangerTreatment(browserWindow, shareButton) {
+  let panel = browserWindow.window.document.getElementById("share-button-panel");
+  if (panel === null) { // create the panel
+    panel = browserWindow.window.document.createElement("panel");
+    panel.setAttribute("id", "share-button-panel");
+    panel.setAttribute("type", "arrow");
+    panel.setAttribute("noautofocus", true);
+    panel.setAttribute("level", "parent");
+
+    const embeddedBrowser = browserWindow.window.document.createElement("browser");
+    embeddedBrowser.setAttribute("id", "share-button-doorhanger");
+    embeddedBrowser.setAttribute("src", "resource://share-button-study/doorhanger.html");
+    embeddedBrowser.setAttribute("type", "content");
+    embeddedBrowser.setAttribute("disableglobalhistory", "true");
+    embeddedBrowser.setAttribute("flex", "1");
+
+    panel.appendChild(embeddedBrowser);
+    browserWindow.window.document.getElementById("mainPopupSet").appendChild(panel);
+  }
+  panel.openPopup(shareButton, "bottomcenter topright", 0, 0, false, false);
+}
+
+function highlightTreatment(browserWindow, shareButton) {
+  // add the event listener to remove the css class when the animation ends
+  shareButton.addEventListener("animationend", browserWindow.animationEndListener);
+  shareButton.classList.add("social-share-button-on");
+}
+
+// define treatments as STRING: fn(browserWindow, shareButton)
+const TREATMENTS = {
+  DOORHANGER: doorhangerTreatment,
+  HIGHLIGHT: highlightTreatment,
+};
 
 class CopyController {
   // See https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XUL/Property/controllers
   constructor(browserWindow) {
     this.browserWindow = browserWindow;
+    this.treatment = "ALL";
   }
 
   supportsCommand(cmd) { return cmd === "cmd_copy" || cmd === "share-button-study"; }
@@ -19,10 +55,17 @@ class CopyController {
   doCommand(cmd) {
     if (cmd === "cmd_copy") {
       const shareButton = this.browserWindow.shareButton;
+      // if the shareButton is added to the toolbar and the current page can be shared
       if (shareButton !== null && shareButton.attributes.getNamedItem("disabled") === null) {
-        // add the event listener to remove the css class when the animation ends
-        shareButton.addEventListener("animationend", this.browserWindow.animationEndListener);
-        shareButton.classList.add("social-share-button-on");
+        if (this.treatment === "ALL") {
+          Object.keys(TREATMENTS).forEach((key, index) => {
+            if (Object.prototype.hasOwnProperty.call(TREATMENTS, key)) {
+              TREATMENTS[key](this.browserWindow, shareButton);
+            }
+          });
+        } else {
+          TREATMENTS[this.treatment](this.browserWindow, shareButton);
+        }
       }
     }
     // Iterate over all other controllers and call doCommand on the first controller
@@ -105,13 +148,15 @@ class BrowserWindow {
   insertCSS() {
     const utils = this.window.QueryInterface(Ci.nsIInterfaceRequestor)
       .getInterface(Ci.nsIDOMWindowUtils);
-    utils.loadSheet(CSS_URI, utils.AGENT_SHEET);
+    utils.loadSheet(SHAREBUTTON_CSS_URI, utils.AGENT_SHEET);
+    utils.loadSheet(PANEL_CSS_URI, utils.AGENT_SHEET);
   }
 
   removeCSS() {
     const utils = this.window.QueryInterface(Ci.nsIInterfaceRequestor)
       .getInterface(Ci.nsIDOMWindowUtils);
-    utils.removeSheet(CSS_URI, utils.AGENT_SHEET);
+    utils.removeSheet(SHAREBUTTON_CSS_URI, utils.AGENT_SHEET);
+    utils.removeSheet(PANEL_CSS_URI, utils.AGENT_SHEET);
   }
 
   startup() {
@@ -143,6 +188,12 @@ class BrowserWindow {
 
     // Remove the copy controller
     this.removeCopyController();
+
+    // Remove the share-button-panel
+    const sharePanel = this.window.document.getElementById("share-button-panel");
+    if (sharePanel !== null) {
+      sharePanel.remove();
+    }
 
     // Remove modifications to shareButton (modified in CopyController)
     if (this.shareButton !== null) {
