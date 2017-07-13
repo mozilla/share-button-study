@@ -93,6 +93,16 @@ describe("Add-on Functional Tests", function() {
     assert(panelOpened);
   });
 
+  it("should not trigger treatments if the share button is in the overflow menu", async() => {
+    const window = driver.manage().window();
+    const currentSize = await window.getSize();
+    await window.setSize(640, 480);
+    await utils.copyUrlBar(driver);
+    assert(!(await utils.testPanel(driver)));
+    await window.setSize(currentSize.width, currentSize.height);
+  });
+
+  // ADDON UNINSTALLED
   it("should no longer trigger animation once uninstalled", async() => {
     await utils.uninstallAddon(driver, addonId);
     await utils.copyUrlBar(driver);
