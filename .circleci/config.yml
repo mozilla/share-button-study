@@ -9,20 +9,15 @@ jobs:
     working_directory: /share-button-study
 
     steps:
+      - run:
+          name: xvfb and openbox
+          command: Xvfb $DISPLAY -ac & sleep 1 & openbox
+          background: true
+    
       - checkout
 
       - restore_cache:
           key: projectname-{{ .Branch }}-{{ checksum "yarn.lock" }}
-
-      - run:
-          name: xvfb
-          command: Xvfb $DISPLAY -ac
-          background: true
-
-      - run:
-          name: openbox
-          command: openbox
-          background: true
 
       - run: yarn install
 
