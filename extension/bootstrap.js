@@ -58,7 +58,7 @@ class CopyController {
       if (shareButton !== null && // the button exists
           shareButton.getAttribute("disabled") !== "true" && // the page we are on can be shared
           shareButton.getAttribute("cui-areatype") === "toolbar" && // the button is in the toolbar
-          shareButton.getAttribute("overflowItem") !== "true") { // but not in the overflow menu
+          shareButton.getAttribute("overflowedItem") !== "true") { // but not in the overflow menu
         if (this.treatment === "ALL") {
           Object.keys(TREATMENTS).forEach((key, index) => {
             if (Object.prototype.hasOwnProperty.call(TREATMENTS, key)) {
