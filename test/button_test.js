@@ -3,7 +3,6 @@
 const assert = require("assert");
 const utils = require("./utils");
 const clipboardy = require("clipboardy");
-// const webdriver = require("selenium-webdriver");
 const firefox = require("selenium-webdriver/firefox");
 
 const Context = firefox.Context;
@@ -13,16 +12,27 @@ const Context = firefox.Context;
 
 describe("Add-on Functional Tests", function() {
   // This gives Firefox time to start, and us a bit longer during some of the tests.
-  this.timeout(10000);
+  this.timeout(15000);
 
   let driver;
   let addonId;
 
   before(async() => {
     driver = await utils.promiseSetupDriver();
+    // install the addon
+    addonId = await utils.installAddon(driver);
+    // add the share-button to the toolbar
+    await utils.addShareButton(driver);
   });
 
   after(() => driver.quit());
+
+  afterEach(async() => {
+    // wait for the animation to end before running subsequent tests
+    await utils.waitForAnimationEnd(driver);
+    // close the popup
+    await utils.closePanel(driver);
+  });
 
   it("should have a URL bar", async() => {
     const urlBar = await utils.promiseUrlBar(driver);
@@ -31,11 +41,6 @@ describe("Add-on Functional Tests", function() {
   });
 
   it("should have a toolbar button", async() => {
-    // add the share-button to the toolbar
-    await utils.addShareButton(driver);
-    // install the addon
-    addonId = await utils.installAddon(driver);
-
     const button = await utils.promiseAddonButton(driver);
     const text = await button.getAttribute("tooltiptext");
     assert.equal(text, "Share this page");
@@ -67,7 +72,7 @@ describe("Add-on Functional Tests", function() {
   });
 
   it("animation should trigger on regular page", async() => {
-    // navigate to a disabled page
+    // navigate to a regular page
     driver.setContext(Context.CONTENT);
     await driver.get("http://mozilla.org");
     driver.setContext(Context.CHROME);
@@ -75,15 +80,28 @@ describe("Add-on Functional Tests", function() {
     await utils.copyUrlBar(driver);
     const { hasClass, hasColor } = await utils.testAnimation(driver);
     assert(hasClass && hasColor);
-    // wait for the animation to end before running subsequent tests
-    await utils.waitForAnimationEnd(driver);
   });
 
+  it("popup should trigger on regular page", async() => {
+    // navigate to a regular page
+    driver.setContext(Context.CONTENT);
+    await driver.get("http://github.com/mozilla");
+    driver.setContext(Context.CHROME);
+
+    await utils.copyUrlBar(driver);
+    const panelOpened = await utils.testPanel(driver);
+    assert(panelOpened);
+  });
 
   it("should no longer trigger animation once uninstalled", async() => {
     await utils.uninstallAddon(driver, addonId);
     await utils.copyUrlBar(driver);
     const { hasClass, hasColor } = await utils.testAnimation(driver);
     assert(!hasClass && !hasColor);
+  });
+
+  it("should no longer trigger popup once uninstalled", async() => {
+    await utils.copyUrlBar(driver);
+    assert(!(await utils.testPanel(driver)));
   });
 });

@@ -1,11 +1,10 @@
 /* eslint-env node */
 // The geckodriver package downloads and installs geckodriver for us.
 // We use it by requiring it.
-
 require("geckodriver");
 const cmd = require("selenium-webdriver/lib/command");
 const firefox = require("selenium-webdriver/firefox");
-const Fs = require("fs-promise");
+const Fs = require("fs-extra");
 const FxRunnerUtils = require("fx-runner/lib/utils");
 const path = require("path");
 const webdriver = require("selenium-webdriver");
@@ -95,10 +94,16 @@ module.exports.uninstallAddon = async(driver, id) => {
   await executor.execute(uninstallCmd);
 };
 
-module.exports.promiseAddonButton = (driver) => {
+module.exports.promiseAddonButton = async(driver) => {
   driver.setContext(Context.CHROME);
-  return driver.wait(until.elementLocated(
-    By.id("social-share-button")), 1000);
+  try {
+    return await driver.wait(until.elementLocated(
+      By.id("social-share-button")), 1000);
+  } catch (e) {
+    // if there an error, the button was not found
+    // so return null
+    return null;
+  }
 };
 
 module.exports.promiseUrlBar = (driver) => {
@@ -119,6 +124,7 @@ module.exports.copyUrlBar = async(driver) => {
 
 module.exports.testAnimation = async(driver) => {
   const button = await module.exports.promiseAddonButton(driver);
+  if (button === null) { return { hasClass: false, hasColor: false }; }
 
   const buttonClassString = await button.getAttribute("class");
   const buttonColor = await button.getCssValue("background-color");
@@ -128,6 +134,7 @@ module.exports.testAnimation = async(driver) => {
   return { hasClass, hasColor };
 };
 
+// FIXME waitForClassAdded is no longer being used?
 module.exports.waitForClassAdded = async driver =>
   driver.wait(async() => {
     const { hasClass } = await module.exports.testAnimation(driver);
@@ -139,3 +146,40 @@ module.exports.waitForAnimationEnd = async driver =>
     const { hasClass, hasColor } = await module.exports.testAnimation(driver);
     return !hasClass && !hasColor;
   }, 2000);
+
+module.exports.takeScreenshot = async(driver) => {
+  try {
+    const data = await driver.takeScreenshot();
+    return await Fs.outputFile("./screenshot.png",
+      data, "base64");
+  } catch (screenshotError) {
+    throw screenshotError;
+  }
+};
+
+module.exports.testPanel = async(driver) => {
+  driver.setContext(Context.CHROME);
+  try { // if we can't find the panel, return false
+    return await driver.wait(async() => {
+      // need to execute JS, since state is not an HTML attribute, it's a property
+      const panelState = await driver.executeAsyncScript((callback) => {
+        const shareButtonPanel = window.document.getElementById("share-button-panel");
+        if (shareButtonPanel === null) {
+          callback(null);
+        } else {
+          const state = shareButtonPanel.state;
+          callback(state);
+        }
+      });
+      return panelState === "open";
+    }, 3000);
+  } catch (e) {
+    if (e.name === "TimeoutError") { return null; }
+    throw e;
+  }
+};
+
+module.exports.closePanel = async(driver) => {
+  const urlbar = await module.exports.promiseUrlBar(driver);
+  await urlbar.sendKeys(webdriver.Key.ESCAPE);
+};

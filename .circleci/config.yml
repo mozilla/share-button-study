@@ -2,24 +2,22 @@ version: 2
 jobs:
   build:
     docker:
-      - image: ubuntu:16.04
+      - image: marcrowo/share-button-study-base:4
+        environment:
+          DISPLAY: :10
 
     working_directory: /share-button-study
 
     steps:
-      - checkout
-
       - run:
-          name: dependencies
-          command: ./install.sh
+          name: xvfb and openbox
+          command: Xvfb $DISPLAY -ac & sleep 1 & openbox
+          background: true
+    
+      - checkout
 
       - restore_cache:
           key: projectname-{{ .Branch }}-{{ checksum "yarn.lock" }}
-
-      - run:
-          name: xvfb
-          command: Xvfb :10 -ac
-          background: true
 
       - run: yarn install
 
@@ -38,9 +36,7 @@ jobs:
   
       - run:
           name: Functional tests
-          command: |
-            export DISPLAY=:10
-            npm run test
+          command: npm run test
 
       - store_artifacts:
           path: "extension/share-button-study.xpi"

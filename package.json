@@ -9,7 +9,7 @@
   "dependencies": {
     "clipboardy": "^1.1.4",
     "eslint-plugin-mozilla": "^0.3.4",
-    "fs-promise": "^2.0.3",
+    "fs-extra": "^3.0.1",
     "fx-runner": "^1.0.6",
     "geckodriver": "^1.7.1",
     "mocha": "^3.4.2",
@@ -25,6 +25,7 @@
     "postinstall": "./bin/patch_webdriver.sh",
     "lint": "eslint .",
     "build": "./bin/make_xpi.sh",
-    "test": "export FIREFOX_BINARY=firefox XPI_NAME=extension/share-button-study.xpi && npm run build && mocha test"
+    "test": "export FIREFOX_BINARY=firefox XPI_NAME=extension/share-button-study.xpi && npm run build && mocha test",
+    "man": "export FIREFOX_BINARY=firefox XPI_NAME=extension/share-button-study.xpi && npm run build && node manual_test.js"
   }
 }
