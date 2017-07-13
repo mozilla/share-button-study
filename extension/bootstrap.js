@@ -20,9 +20,9 @@ class CopyController {
     if (cmd === "cmd_copy") {
       const shareButton = this.browserWindow.shareButton;
       if (shareButton !== null && // the button exists
-        !shareButton.hasAttribute("disabled") && // the page we are on can be shared
+        shareButton.getAttribute("disabled") !== "true" && // the page we are on can be shared
         shareButton.getAttribute("cui-areatype") === "toolbar" && // the button is in the toolbar
-        !shareButton.hasAttribute("overflowItem")) { // but not in the overflow menu
+        shareButton.getAttribute("overflowItem") !== "true") { // but not in the overflow menu
         // add the event listener to remove the css class when the animation ends
         shareButton.addEventListener("animationend", this.browserWindow.animationEndListener);
         shareButton.classList.add("social-share-button-on");
