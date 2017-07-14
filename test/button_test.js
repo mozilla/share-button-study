@@ -10,57 +10,6 @@ const Context = firefox.Context;
 // TODO create new profile per test?
 // then we can test with a clean profile every time
 
-async function urlBarTest(driver) {
-  const urlBar = await utils.promiseUrlBar(driver);
-  const text = await urlBar.getAttribute("placeholder");
-  assert.equal(text, "Search or enter address");
-}
-
-async function toolbarTest(driver) {
-  const button = await utils.promiseAddonButton(driver);
-  const text = await button.getAttribute("tooltiptext");
-  assert.equal(text, "Share this page");
-}
-
-async function copyPasteTest(driver) {
-  // FIXME testText will automatically be treated as a URL
-  // which means that it will be formatted and the clipboard
-  // value will be different unless we pass in a URL text at
-  // the start
-  const testText = "about:test";
-
-  // write dummy value just in case testText is already in clipboard
-  await clipboardy.write("foobar");
-  const urlBar = await utils.promiseUrlBar(driver);
-  await urlBar.sendKeys(testText);
-
-  await utils.copyUrlBar(driver);
-  const clipboard = await clipboardy.read();
-  assert(clipboard === testText);
-}
-
-async function disabledPageAnimationTest(driver) {
-  // navigate to a disabled page
-  driver.setContext(Context.CONTENT);
-  await driver.get("about:blank");
-  driver.setContext(Context.CHROME);
-
-  await utils.copyUrlBar(driver);
-  const { hasClass, hasColor } = await utils.testAnimation(driver);
-  assert(!hasClass && !hasColor);
-}
-
-async function disabledPagePopupTest(driver) {
-  // navigate to a regular page
-  driver.setContext(Context.CONTENT);
-  await driver.get("about:blank");
-  driver.setContext(Context.CHROME);
-
-  await utils.copyUrlBar(driver);
-  const panelOpened = await utils.testPanel(driver);
-  assert(!panelOpened);
-}
-
 async function regularPageAnimationTest(driver) {
   // navigate to a regular page
   driver.setContext(Context.CONTENT);
@@ -81,27 +30,6 @@ async function regularPagePopupTest(driver) {
   await utils.copyUrlBar(driver);
   const panelOpened = await utils.testPanel(driver);
   assert(panelOpened);
-}
-
-async function overflowMenuTest(driver) {
-  const window = driver.manage().window();
-  const currentSize = await window.getSize();
-  await window.setSize(640, 480);
-  await utils.copyUrlBar(driver);
-  assert(!(await utils.testPanel(driver)));
-  await window.setSize(currentSize.width, currentSize.height);
-}
-
-async function uninstallAddonAnimationTest(driver, addonId) {
-  await utils.uninstallAddon(driver, addonId);
-  await utils.copyUrlBar(driver);
-  const { hasClass, hasColor } = await utils.testAnimation(driver);
-  assert(!hasClass && !hasColor);
-}
-
-async function uninstallAddonPopupTest(driver) {
-  await utils.copyUrlBar(driver);
-  assert(!(await utils.testPanel(driver)));
 }
 
 describe("Add-on Functional Tests", function() {
@@ -128,30 +56,83 @@ describe("Add-on Functional Tests", function() {
     await utils.closePanel(driver);
   });
 
-  it("should have a URL bar", async() => urlBarTest(driver));
+  it("should have a URL bar", async() => {
+    const urlBar = await utils.promiseUrlBar(driver);
+    const text = await urlBar.getAttribute("placeholder");
+    assert.equal(text, "Search or enter address");
+  });
 
-  it("should have a toolbar button", async() => toolbarTest(driver));
+  it("should have a toolbar button", async() => {
+    const button = await utils.promiseAddonButton(driver);
+    const text = await button.getAttribute("tooltiptext");
+    assert.equal(text, "Share this page");
+  });
 
-  it("should have copy paste working", async() => copyPasteTest(driver));
+  it("should have copy paste working", async() => {
+    // FIXME testText will automatically be treated as a URL
+    // which means that it will be formatted and the clipboard
+    // value will be different unless we pass in a URL text at
+    // the start
+    const testText = "about:test";
 
-  it("animation should not trigger on disabled page",
-    async() => disabledPageAnimationTest(driver));
+    // write dummy value just in case testText is already in clipboard
+    await clipboardy.write("foobar");
+    const urlBar = await utils.promiseUrlBar(driver);
+    await urlBar.sendKeys(testText);
 
-  it("popup should not trigger on disabled page", async() => disabledPagePopupTest(driver));
+    await utils.copyUrlBar(driver);
+    const clipboard = await clipboardy.read();
+    assert(clipboard === testText);
+  });
 
-  it("animation should trigger on regular page", async() => regularPageAnimationTest(driver));
+  it("animation should not trigger on disabled page", async() => {
+    // navigate to a disabled page
+    driver.setContext(Context.CONTENT);
+    await driver.get("about:blank");
+    driver.setContext(Context.CHROME);
 
-  it("popup should trigger on regular page", async() => regularPagePopupTest(driver));
+    await utils.copyUrlBar(driver);
+    const { hasClass, hasColor } = await utils.testAnimation(driver);
+    assert(!hasClass && !hasColor);
+  });
 
-  it("should not trigger treatments if the share button is in the overflow menu",
-    async() => overflowMenuTest(driver));
+  it("popup should not trigger on disabled page", async() => {
+    // navigate to a regular page
+    driver.setContext(Context.CONTENT);
+    await driver.get("about:blank");
+    driver.setContext(Context.CHROME);
+
+    await utils.copyUrlBar(driver);
+    const panelOpened = await utils.testPanel(driver);
+    assert(!panelOpened);
+  });
+
+  it("animation should trigger on regular page", () => regularPageAnimationTest(driver));
+
+  it("popup should trigger on regular page", () => regularPagePopupTest(driver));
+
+  it("should not trigger treatments if the share button is in the overflow menu", async() => {
+    const window = driver.manage().window();
+    const currentSize = await window.getSize();
+    await window.setSize(640, 480);
+    await utils.copyUrlBar(driver);
+    assert(!(await utils.testPanel(driver)));
+    await window.setSize(currentSize.width, currentSize.height);
+  });
 
   // ADDON UNINSTALLED
-  it("should no longer trigger animation once uninstalled",
-    async() => uninstallAddonAnimationTest(driver, addonId));
+  it("should no longer trigger animation once uninstalled", async() => {
+    await utils.uninstallAddon(driver, addonId);
+    await utils.copyUrlBar(driver);
+    const { hasClass, hasColor } = await utils.testAnimation(driver);
+    assert(!hasClass && !hasColor);
+  });
 
   it("should no longer trigger popup once uninstalled",
-    async() => uninstallAddonPopupTest(driver));
+    async() => {
+      await utils.copyUrlBar(driver);
+      assert(!(await utils.testPanel(driver)));
+    });
 });
 
 describe("New Window Add-on Functional Tests", function() {
