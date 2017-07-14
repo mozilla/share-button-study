@@ -123,13 +123,9 @@ describe("Add-on Functional Tests", function() {
   // These tests uninstall the addon before and install the addon after.
   // This lets us assume the addon is installed at the start of each test.
   describe("Addon uninstall tests", () => {
-    beforeEach(async() => {
-      await utils.uninstallAddon(driver, addonId);
-    });
+    before(async() => utils.uninstallAddon(driver, addonId));
 
-    afterEach(async() => {
-      addonId = await utils.installAddon(driver);
-    });
+    after(async() => utils.installAddon(driver));
 
     it("should no longer trigger animation once uninstalled", async() => {
       await utils.copyUrlBar(driver);
