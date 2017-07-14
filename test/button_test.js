@@ -159,12 +159,11 @@ describe("Multiple Window Add-on Functional Tests", function() {
   this.timeout(15000);
 
   let driver;
-  let addonId;
 
   before(async() => {
     driver = await utils.promiseSetupDriver();
     // install the addon
-    addonId = await utils.installAddon(driver);
+    await utils.installAddon(driver);
     // add the share-button to the toolbar
     await utils.addShareButton(driver);
 
@@ -183,28 +182,7 @@ describe("Multiple Window Add-on Functional Tests", function() {
     await utils.closePanel(driver);
   });
 
-  it("should have a URL bar", async() => urlBarTest(driver));
-
-  it("should have a toolbar button", async() => toolbarTest(driver));
-
-  it("should have copy paste working", async() => copyPasteTest(driver));
-
-  it("animation should not trigger on disabled page",
-    async() => disabledPageAnimationTest(driver));
-
-  it("popup should not trigger on disabled page", async() => disabledPagePopupTest(driver));
-
   it("animation should trigger on regular page", async() => regularPageAnimationTest(driver));
 
   it("popup should trigger on regular page", async() => regularPagePopupTest(driver));
-
-  it("should not trigger treatments if the share button is in the overflow menu",
-    async() => overflowMenuTest(driver));
-
-  // ADDON UNINSTALLED
-  it("should no longer trigger animation once uninstalled",
-    async() => uninstallAddonAnimationTest(driver, addonId));
-
-  it("should no longer trigger popup once uninstalled",
-    async() => uninstallAddonPopupTest(driver));
 });
