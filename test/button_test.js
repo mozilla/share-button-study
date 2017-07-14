@@ -120,19 +120,24 @@ describe("Add-on Functional Tests", function() {
     await window.setSize(currentSize.width, currentSize.height);
   });
 
-  // ADDON UNINSTALLED
-  it("should no longer trigger animation once uninstalled", async() => {
-    await utils.uninstallAddon(driver, addonId);
-    await utils.copyUrlBar(driver);
-    const { hasClass, hasColor } = await utils.testAnimation(driver);
-    assert(!hasClass && !hasColor);
-  });
+  // These tests uninstall the addon before and install the addon after.
+  // This lets us assume the addon is installed at the start of each test.
+  describe("Addon uninstall tests", () => {
+    before(async() => utils.uninstallAddon(driver, addonId));
 
-  it("should no longer trigger popup once uninstalled",
-    async() => {
+    after(async() => utils.installAddon(driver));
+
+    it("should no longer trigger animation once uninstalled", async() => {
+      await utils.copyUrlBar(driver);
+      const { hasClass, hasColor } = await utils.testAnimation(driver);
+      assert(!hasClass && !hasColor);
+    });
+
+    it("should no longer trigger popup once uninstalled", async() => {
       await utils.copyUrlBar(driver);
       assert(!(await utils.testPanel(driver)));
     });
+  });
 });
 
 describe("New Window Add-on Functional Tests", function() {
