@@ -154,7 +154,7 @@ describe("Add-on Functional Tests", function() {
     async() => uninstallAddonPopupTest(driver));
 });
 
-describe("Multiple Window Add-on Functional Tests", function() {
+describe("New Window Add-on Functional Tests", function() {
   // This gives Firefox time to start, and us a bit longer during some of the tests.
   this.timeout(15000);
 

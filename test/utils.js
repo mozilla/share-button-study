@@ -122,7 +122,7 @@ function getModifierKey() {
 module.exports.openWindow = async(driver) => {
   // send MODIFIER + N
   driver.setContext(Context.CHROME);
-  let urlBar = await module.exports.promiseUrlBar(driver);
+  const urlBar = await module.exports.promiseUrlBar(driver);
   const modifierKey = getModifierKey();
   await urlBar.sendKeys(webdriver.Key.chord(modifierKey, "N"));
   // close the old window
@@ -131,7 +131,6 @@ module.exports.openWindow = async(driver) => {
   const handles = await driver.getAllWindowHandles();
   assert(handles.length >= 1);
   await driver.switchTo().window(handles[0]);
-  urlBar = await module.exports.promiseUrlBar(driver);
 };
 
 module.exports.copyUrlBar = async(driver) => {
