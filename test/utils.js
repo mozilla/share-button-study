@@ -190,7 +190,7 @@ module.exports.testPanel = async(driver) => {
         }
       });
       return panelState === "open";
-    }, 2000);
+    }, 3000);
   } catch (e) {
     if (e.name === "TimeoutError") { return null; }
     throw e;
