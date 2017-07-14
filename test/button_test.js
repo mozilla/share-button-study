@@ -10,6 +10,28 @@ const Context = firefox.Context;
 // TODO create new profile per test?
 // then we can test with a clean profile every time
 
+async function regularPageAnimationTest(driver) {
+  // navigate to a regular page
+  driver.setContext(Context.CONTENT);
+  await driver.get("http://mozilla.org");
+  driver.setContext(Context.CHROME);
+
+  await utils.copyUrlBar(driver);
+  const { hasClass, hasColor } = await utils.testAnimation(driver);
+  assert(hasClass && hasColor);
+}
+
+async function regularPagePopupTest(driver) {
+  // navigate to a regular page
+  driver.setContext(Context.CONTENT);
+  await driver.get("http://mozilla.org");
+  driver.setContext(Context.CHROME);
+
+  await utils.copyUrlBar(driver);
+  const panelOpened = await utils.testPanel(driver);
+  assert(panelOpened);
+}
+
 describe("Add-on Functional Tests", function() {
   // This gives Firefox time to start, and us a bit longer during some of the tests.
   this.timeout(15000);
@@ -55,6 +77,9 @@ describe("Add-on Functional Tests", function() {
 
     // write dummy value just in case testText is already in clipboard
     await clipboardy.write("foobar");
+    const urlBar = await utils.promiseUrlBar(driver);
+    await urlBar.sendKeys(testText);
+
     await utils.copyUrlBar(driver);
     const clipboard = await clipboardy.read();
     assert(clipboard === testText);
@@ -71,27 +96,20 @@ describe("Add-on Functional Tests", function() {
     assert(!hasClass && !hasColor);
   });
 
-  it("animation should trigger on regular page", async() => {
+  it("popup should not trigger on disabled page", async() => {
     // navigate to a regular page
     driver.setContext(Context.CONTENT);
-    await driver.get("http://mozilla.org");
-    driver.setContext(Context.CHROME);
-
-    await utils.copyUrlBar(driver);
-    const { hasClass, hasColor } = await utils.testAnimation(driver);
-    assert(hasClass && hasColor);
-  });
-
-  it("popup should trigger on regular page", async() => {
-    // navigate to a regular page
-    driver.setContext(Context.CONTENT);
-    await driver.get("http://mozilla.org");
+    await driver.get("about:blank");
     driver.setContext(Context.CHROME);
 
     await utils.copyUrlBar(driver);
     const panelOpened = await utils.testPanel(driver);
-    assert(panelOpened);
+    assert(!panelOpened);
   });
+
+  it("animation should trigger on regular page", () => regularPageAnimationTest(driver));
+
+  it("popup should trigger on regular page", () => regularPagePopupTest(driver));
 
   it("should not trigger treatments if the share button is in the overflow menu", async() => {
     const window = driver.manage().window();
@@ -110,8 +128,42 @@ describe("Add-on Functional Tests", function() {
     assert(!hasClass && !hasColor);
   });
 
-  it("should no longer trigger popup once uninstalled", async() => {
-    await utils.copyUrlBar(driver);
-    assert(!(await utils.testPanel(driver)));
+  it("should no longer trigger popup once uninstalled",
+    async() => {
+      await utils.copyUrlBar(driver);
+      assert(!(await utils.testPanel(driver)));
+    });
+});
+
+describe("New Window Add-on Functional Tests", function() {
+  // This gives Firefox time to start, and us a bit longer during some of the tests.
+  this.timeout(15000);
+
+  let driver;
+
+  before(async() => {
+    driver = await utils.promiseSetupDriver();
+    // install the addon
+    await utils.installAddon(driver);
+    // add the share-button to the toolbar
+    await utils.addShareButton(driver);
+
+    // open a new window and switch to it this will test
+    // the new window listener since this window was opened
+    // *after* the addon was installed
+    await utils.openWindow(driver);
   });
+
+  after(() => driver.quit());
+
+  afterEach(async() => {
+    // wait for the animation to end before running subsequent tests
+    await utils.waitForAnimationEnd(driver);
+    // close the popup
+    await utils.closePanel(driver);
+  });
+
+  it("animation should trigger on regular page", async() => regularPageAnimationTest(driver));
+
+  it("popup should trigger on regular page", async() => regularPagePopupTest(driver));
 });

@@ -28,10 +28,6 @@ const Context = firefox.Context;
     driver.setContext(Context.CHROME);
 
     await utils.copyUrlBar(driver);
-    const panelStates = await utils.testPanel(driver);
-    for (const state of panelStates) {
-      console.log(state); // eslint-disable-line no-console
-    }
   } catch (e) {
     console.error(e); // eslint-disable-line no-console
   }

@@ -2,6 +2,7 @@
 // The geckodriver package downloads and installs geckodriver for us.
 // We use it by requiring it.
 require("geckodriver");
+const assert = require("assert");
 const cmd = require("selenium-webdriver/lib/command");
 const firefox = require("selenium-webdriver/firefox");
 const Fs = require("fs-extra");
@@ -112,12 +113,29 @@ module.exports.promiseUrlBar = (driver) => {
     By.id("urlbar")), 1000);
 };
 
-module.exports.copyUrlBar = async(driver) => {
-  const urlBar = await module.exports.promiseUrlBar(driver);
-  const testText = "about:test";
-  await urlBar.sendKeys(testText);
+function getModifierKey() {
   const modifierKey = process.platform === "darwin" ?
     webdriver.Key.COMMAND : webdriver.Key.CONTROL;
+  return modifierKey;
+}
+
+module.exports.openWindow = async(driver) => {
+  // send MODIFIER + N
+  driver.setContext(Context.CHROME);
+  const urlBar = await module.exports.promiseUrlBar(driver);
+  const modifierKey = getModifierKey();
+  await urlBar.sendKeys(webdriver.Key.chord(modifierKey, "N"));
+  // close the old window
+  await driver.close();
+  // switch the driver to the new window
+  const handles = await driver.getAllWindowHandles();
+  assert(handles.length >= 1);
+  await driver.switchTo().window(handles[0]);
+};
+
+module.exports.copyUrlBar = async(driver) => {
+  const urlBar = await module.exports.promiseUrlBar(driver);
+  const modifierKey = getModifierKey();
   await urlBar.sendKeys(webdriver.Key.chord(modifierKey, "A"));
   await urlBar.sendKeys(webdriver.Key.chord(modifierKey, "C"));
 };
