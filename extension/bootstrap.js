@@ -173,7 +173,6 @@ class BrowserWindow {
   }
 
   shareButtonTelemetryListener() {
-    console.log("SHARE BUTTON CLICKED");
     studyUtils.telemetry({ event: "share-button-clicked" });
   }
 
