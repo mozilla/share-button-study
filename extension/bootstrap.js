@@ -283,7 +283,6 @@ this.startup = async function(data, reason) {
   studyUtils.setLoggingLevel(config.log.studyUtils.level);
   const variation = await chooseVariation();
   studyUtils.setVariation(variation);
-  // TODO Send telemetry with chosen variation? This should probably be in setVariation().
 
   // TODO Import config.modules?
 
