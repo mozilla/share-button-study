@@ -109,6 +109,29 @@ describe("Add-on Functional Tests", function() {
 
   it("animation should trigger on regular page", () => regularPageAnimationTest(driver));
 
+  it("should send telemetry pings for animation and doorhanger", async() => {
+    // navigate to a regular page
+    driver.setContext(Context.CONTENT);
+    await driver.get("http://mozilla.org");
+    driver.setContext(Context.CHROME);
+
+    await utils.copyUrlBar(driver);
+    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+
+    let highlightTelemetrySent = false;
+    let doorHangerTelemetrySent = false;
+    for (const ping of pings) {
+      if (ping.payload.data.attributes.treatment === "highlight") {
+        highlightTelemetrySent = true;
+      }
+      if (ping.payload.data.attributes.treatment === "doorhanger") {
+        doorHangerTelemetrySent = true;
+      }
+      if (highlightTelemetrySent && doorHangerTelemetrySent) break;
+    }
+    assert(highlightTelemetrySent && doorHangerTelemetrySent);
+  });
+
   it("popup should trigger on regular page", () => regularPagePopupTest(driver));
 
   it("should not trigger treatments if the share button is in the overflow menu", async() => {
