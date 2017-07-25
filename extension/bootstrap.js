@@ -172,18 +172,6 @@ class BrowserWindow {
     this.urlInput.controllers.removeController(this.copyController);
   }
 
-  shareButtonTelemetryListener() {
-    studyUtils.telemetry({ event: "share-button-clicked" });
-  }
-
-  addTelemetryListener() {
-    this.shareButton.addEventListener("click", this.shareButtonTelemetryListener);
-  }
-
-  removeTelemetryListener() {
-    this.shareButton.removeEventListener("click", this.shareButtonTelemetryListener);
-  }
-
   animationEndListener(e) {
     // When the animation is done, we want to remove the CSS class
     // so that we can add the class again upon the next copy and
@@ -231,9 +219,6 @@ class BrowserWindow {
 
     // insert the copy controller to detect copying from URL bar
     this.insertCopyController();
-
-    // insert telemetry listener: send a ping when the share button is clicked
-    this.addTelemetryListener();
   }
 
   shutdown() {
@@ -258,8 +243,6 @@ class BrowserWindow {
       // so we don't have anything to remove
       this.shareButton.classList.remove("social-share-button-on");
       this.shareButton.removeEventListener("animationend", this.animationEndListener);
-      // remove telemetry listener
-      this.removeTelemetryListener();
     }
   }
 }

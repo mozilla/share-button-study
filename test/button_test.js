@@ -32,7 +32,7 @@ async function regularPagePopupTest(driver) {
   assert(panelOpened);
 }
 
-describe("Add-on Functional Tests", function() {
+/*describe("Add-on Functional Tests", function() {
   // This gives Firefox time to start, and us a bit longer during some of the tests.
   this.timeout(15000);
 
@@ -47,7 +47,7 @@ describe("Add-on Functional Tests", function() {
     await utils.addShareButton(driver);
   });
 
-  after(() => driver.quit());
+  //after(() => driver.quit());
 
   afterEach(async() => {
     // wait for the animation to end before running subsequent tests
@@ -138,7 +138,7 @@ describe("Add-on Functional Tests", function() {
       assert(!(await utils.testPanel(driver)));
     });
   });
-});
+});*/
 
 describe("New Window Add-on Functional Tests", function() {
   // This gives Firefox time to start, and us a bit longer during some of the tests.
@@ -159,7 +159,7 @@ describe("New Window Add-on Functional Tests", function() {
     await utils.openWindow(driver);
   });
 
-  after(() => driver.quit());
+  //after(() => driver.quit());
 
   afterEach(async() => {
     // wait for the animation to end before running subsequent tests
