@@ -30,6 +30,7 @@ const PANEL_CSS_URI = Services.io.newURI("resource://share-button-study/panel.cs
 const browserWindowWeakMap = new WeakMap();
 
 function doorhangerTreatment(browserWindow, shareButton) {
+  studyUtils.telemetry({ treatment: "doorhanger" });
   let panel = browserWindow.window.document.getElementById("share-button-panel");
   if (panel === null) { // create the panel
     panel = browserWindow.window.document.createElement("panel");
@@ -52,6 +53,7 @@ function doorhangerTreatment(browserWindow, shareButton) {
 }
 
 function highlightTreatment(browserWindow, shareButton) {
+  studyUtils.telemetry({ treatment: "highlight" });
   // add the event listener to remove the css class when the animation ends
   shareButton.addEventListener("animationend", browserWindow.animationEndListener);
   shareButton.classList.add("social-share-button-on");
@@ -91,6 +93,7 @@ class CopyController {
 
   doCommand(cmd) {
     if (cmd === "cmd_copy") {
+      studyUtils.telemetry({ event: "copy" });
       const shareButton = this.browserWindow.shareButton;
       if (shareButton !== null && // the button exists
           shareButton.getAttribute("disabled") !== "true" && // the page we are on can be shared
@@ -169,6 +172,19 @@ class BrowserWindow {
     this.urlInput.controllers.removeController(this.copyController);
   }
 
+  shareButtonTelemetryListener() {
+    console.log("SHARE BUTTON CLICKED");
+    studyUtils.telemetry({ event: "share-button-clicked" });
+  }
+
+  addTelemetryListener() {
+    this.shareButton.addEventListener("click", this.shareButtonTelemetryListener);
+  }
+
+  removeTelemetryListener() {
+    this.shareButton.removeEventListener("click", this.shareButtonTelemetryListener);
+  }
+
   animationEndListener(e) {
     // When the animation is done, we want to remove the CSS class
     // so that we can add the class again upon the next copy and
@@ -216,6 +232,9 @@ class BrowserWindow {
 
     // insert the copy controller to detect copying from URL bar
     this.insertCopyController();
+
+    // insert telemetry listener: send a ping when the share button is clicked
+    this.addTelemetryListener();
   }
 
   shutdown() {
@@ -240,6 +259,8 @@ class BrowserWindow {
       // so we don't have anything to remove
       this.shareButton.classList.remove("social-share-button-on");
       this.shareButton.removeEventListener("animationend", this.animationEndListener);
+      // remove telemetry listener
+      this.removeTelemetryListener();
     }
   }
 }
@@ -280,6 +301,7 @@ this.startup = async function(data, reason) {
   studyUtils.setLoggingLevel(config.log.studyUtils.level);
   const variation = await chooseVariation();
   studyUtils.setVariation(variation);
+  // TODO Send telemetry with chosen variation? This should probably be in setVariation().
 
   // TODO Import config.modules?
 
