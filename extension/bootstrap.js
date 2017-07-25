@@ -2,6 +2,11 @@ const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/Console.jsm");
 Cu.import("resource://gre/modules/AppConstants.jsm");
+Cu.import("resource://gre/modules/XPCOMUtils.jsm");
+XPCOMUtils.defineLazyModuleGetter(this, "studyUtils",
+  "resource://share-button-study/StudyUtils.jsm");
+XPCOMUtils.defineLazyModuleGetter(this, "config",
+  "resource://share-button-study/Config.jsm");
 
 const SHAREBUTTON_CSS_URI = Services.io.newURI("resource://share-button-study/share_button.css");
 const PANEL_CSS_URI = Services.io.newURI("resource://share-button-study/panel.css");
@@ -41,11 +46,26 @@ const TREATMENTS = {
   HIGHLIGHT: highlightTreatment,
 };
 
+async function chooseVariation() {
+  let variation;
+  const sample = studyUtils.sample;
+
+  if (config.study.variation) {
+    variation = config.study.variation;
+  } else {
+    // this is the standard arm choosing method
+    const clientId = await studyUtils.getTelemetryId();
+    const hashFraction = await sample.hashFraction(config.study.studyName + clientId);
+    variation = sample.chooseWeighted(config.study.weightedVariations, hashFraction);
+  }
+  return variation;
+}
+
 class CopyController {
   // See https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XUL/Property/controllers
   constructor(browserWindow) {
     this.browserWindow = browserWindow;
-    this.treatment = "ALL";
+    this.treatment = studyUtils.getVariation().name;
   }
 
   supportsCommand(cmd) { return cmd === "cmd_copy" || cmd === "share-button-study"; }
@@ -232,7 +252,18 @@ const windowListener = {
 
 this.install = function(data, reason) {};
 
-this.startup = function(data, reason) {
+this.startup = async function(data, reason) {
+  // TODO new shield-study-utils stuff!
+  studyUtils.setup({
+    studyName: config.study.studyName,
+    endings: config.study.endings,
+    addon: { id: data.id, version: data.version },
+    telemetry: config.study.telemetry,
+  });
+  studyUtils.setLoggingLevel(config.log.studyUtils.level);
+  const variation = await chooseVariation();
+  studyUtils.setVariation(variation);
+
   // iterate over all open windows
   const windowEnumerator = Services.wm.getEnumerator("navigator:browser");
   while (windowEnumerator.hasMoreElements()) {
