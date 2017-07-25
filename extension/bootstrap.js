@@ -8,6 +8,23 @@ XPCOMUtils.defineLazyModuleGetter(this, "studyUtils",
 XPCOMUtils.defineLazyModuleGetter(this, "config",
   "resource://share-button-study/Config.jsm");
 
+const REASONS = {
+  APP_STARTUP: 1,      // The application is starting up.
+  APP_SHUTDOWN: 2,     // The application is shutting down.
+  ADDON_ENABLE: 3,     // The add-on is being enabled.
+  ADDON_DISABLE: 4,    // The add-on is being disabled. (Also sent during uninstallation)
+  ADDON_INSTALL: 5,    // The add-on is being installed.
+  ADDON_UNINSTALL: 6,  // The add-on is being uninstalled.
+  ADDON_UPGRADE: 7,    // The add-on is being upgraded.
+  ADDON_DOWNGRADE: 8,  // The add-on is being downgraded.
+};
+// REASONS[str] = int and REASONS[int] = str
+for (const key in REASONS) {
+  if (Object.prototype.hasOwnProperty.call(REASONS, key)) {
+    REASONS[REASONS[key]] = key;
+  }
+}
+
 const SHAREBUTTON_CSS_URI = Services.io.newURI("resource://share-button-study/share_button.css");
 const PANEL_CSS_URI = Services.io.newURI("resource://share-button-study/panel.css");
 const browserWindowWeakMap = new WeakMap();
@@ -263,6 +280,22 @@ this.startup = async function(data, reason) {
   studyUtils.setLoggingLevel(config.log.studyUtils.level);
   const variation = await chooseVariation();
   studyUtils.setVariation(variation);
+
+  // TODO Import config.modules?
+
+  if ((REASONS[reason]) === "ADDON_INSTALL") {
+    studyUtils.firstSeen(); // sends telemetry "enter"
+    const eligible = await config.isEligible(); // addon-specific
+    if (!eligible) {
+      // uses config.endings.ineligible.url if any,
+      // sends UT for "ineligible"
+      // then uninstalls addon
+      await studyUtils.endStudy({ reason: "ineligible" });
+      return;
+    }
+  }
+  // sets experiment as active and sends installed telemetry
+  await studyUtils.startup({ reason });
 
   // iterate over all open windows
   const windowEnumerator = Services.wm.getEnumerator("navigator:browser");
