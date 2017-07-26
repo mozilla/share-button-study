@@ -214,23 +214,9 @@ module.exports.getMostRecentPingsByType = async(driver, type) =>
     const pings = await TelemetryArchive.promiseArchivedPingList();
 
     const filteredPings = pings.filter(p => p.type === typeArg);
-    filteredPings.sort((a, b) => {
-      if (a.timestampCreated > b.timestampCreated) {
-        return -1;
-      }
-      if (a.timestampCreated < b.timestampCreated) {
-        return 1;
-      }
-      if (a.timestampCreated === b.timestampCreated) {
-        return 0;
-      }
-      return 0;
-    });
+    filteredPings.sort((a, b) => b.timestampCreated - a.timestampCreated);
 
-    const pingData = [];
-    for (const ping of filteredPings) {
-      pingData.push(TelemetryArchive.promiseArchivedPingById(ping.id));
-    }
+    const pingData = filteredPings.map(ping => TelemetryArchive.promiseArchivedPingById(ping.id));
 
     callback(await Promise.all(pingData));
   }, type);

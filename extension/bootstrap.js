@@ -1,6 +1,3 @@
-// for shield-study-addon-utils
-/* eslint no-underscore-dangle: "off" */
-
 const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/Console.jsm");

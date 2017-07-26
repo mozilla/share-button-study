@@ -8,8 +8,6 @@
 /* eslint no-unused-vars: ["error", { "varsIgnorePattern": "(config|EXPORTED_SYMBOLS)" }]*/
 const EXPORTED_SYMBOLS = ["config"];
 
-// var slug = "shield-example-addon"; // should match chrome.manifest;
-
 const config = {
   study: {
     studyName: "share-button-study", // no spaces, for all the reasons
