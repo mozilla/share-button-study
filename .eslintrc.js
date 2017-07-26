@@ -10,6 +10,6 @@ module.exports = {
         "func-names": "off",
         "class-methods-use-this": "off",
         "no-restricted-syntax": "off",
-        eslint no-underscore-dangle: "off"
+        "no-underscore-dangle": "off"
     }
 };
