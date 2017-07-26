@@ -323,12 +323,9 @@ this.shutdown = function(data, reason) {
 
   // are we uninstalling?
   // if so, user or automatic?
-  console.log(REASONS[reason]);
   if (REASONS[reason] === "ADDON_UNINSTALL" || REASONS[reason] === "ADDON_DISABLE") {
-    console.log("UNINSTALL OR DISABLE", reason);
     if (!studyUtils._isEnding) {
       // we are the first requestors, must be user action.
-      console.log("calling endStudy(disable)");
       studyUtils.endStudy({ reason: "user-disable" });
     }
   }

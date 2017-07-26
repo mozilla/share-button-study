@@ -26,18 +26,7 @@ const config = {
       * - If there is no key for an endStudy reason, no url will open.
       * - usually surveys, orientations, explanations
       */
-    endings: {
-      /** standard endings */
-      "user-disable": {
-        baseUrl: "data:,You uninstalled",
-      },
-      ineligible: {
-        baseUrl: "http://www.example.com/?reason=ineligible",
-      },
-      expired: {
-        baseUrl: "http://www.example.com/?reason=expired",
-      },
-    },
+    endings: {},
     telemetry: {
       send: true, // assumed false. Actually send pings?
       removeTestingFlag: false,  // Marks pings as testing, set true for actual release
