@@ -109,7 +109,7 @@ describe("Add-on Functional Tests", function() {
 
   it("animation should trigger on regular page", () => regularPageAnimationTest(driver));
 
-  it("should send telemetry pings for animation and doorhanger", async() => {
+  it("should send telemetry pings for animation, doorhanger, and copy", async() => {
     // navigate to a regular page
     driver.setContext(Context.CONTENT);
     await driver.get("http://mozilla.org");
@@ -120,6 +120,7 @@ describe("Add-on Functional Tests", function() {
 
     let highlightTelemetrySent = false;
     let doorHangerTelemetrySent = false;
+    let copyTelemetrySent = false;
     for (const ping of pings) {
       if (ping.payload.data.attributes.treatment === "highlight") {
         highlightTelemetrySent = true;
@@ -127,9 +128,12 @@ describe("Add-on Functional Tests", function() {
       if (ping.payload.data.attributes.treatment === "doorhanger") {
         doorHangerTelemetrySent = true;
       }
-      if (highlightTelemetrySent && doorHangerTelemetrySent) break;
+      if (ping.payload.data.attributes.event === "copy") {
+        copyTelemetrySent = true;
+      }
+      if (highlightTelemetrySent && doorHangerTelemetrySent && copyTelemetrySent) break;
     }
-    assert(highlightTelemetrySent && doorHangerTelemetrySent);
+    assert(highlightTelemetrySent && doorHangerTelemetrySent && copyTelemetrySent);
   });
 
   it("popup should trigger on regular page", () => regularPagePopupTest(driver));
