@@ -1,3 +1,6 @@
+// for shield-study-addon-utils
+/* eslint no-underscore-dangle: "off" */
+
 const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/Console.jsm");
@@ -273,7 +276,6 @@ const windowListener = {
 this.install = function(data, reason) {};
 
 this.startup = async function(data, reason) {
-  // TODO new shield-study-utils stuff!
   studyUtils.setup({
     studyName: config.study.studyName,
     endings: config.study.endings,
@@ -323,6 +325,17 @@ this.shutdown = function(data, reason) {
     if (browserWindowWeakMap.has(window)) {
       const browserWindow = browserWindowWeakMap.get(window);
       browserWindow.shutdown();
+    }
+  }
+
+  // TODO Unload modules?
+
+  // are we uninstalling?
+  // if so, user or automatic?
+  if (reason === REASONS.ADDON_UNINSTALL || reason === REASONS.ADDON_DISABLE) {
+    if (!studyUtils._isEnding) {
+      // we are the first requestors, must be user action.
+      studyUtils.endStudy({ reason: "user-disable" });
     }
   }
 };
