@@ -9,8 +9,8 @@ const config = {
     }, // optional, use to override/decide
     weightedVariations: [
       { name: "control", weight: 1 },
-      { name: "DOORHANGER", weight: 2 },
-      { name: "HIGHLIGHT", weight: 0.5 },
+      { name: "doorhanger", weight: 1 },
+      { name: "highlight", weight: 1 },
     ],
     /** **endings**
       * - keys indicate the 'endStudy' even that opens these.
