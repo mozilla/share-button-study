@@ -18,12 +18,6 @@ const REASONS = {
   ADDON_UPGRADE: 7,    // The add-on is being upgraded.
   ADDON_DOWNGRADE: 8,  // The add-on is being downgraded.
 };
-// REASONS[str] = int and REASONS[int] = str
-for (const key in REASONS) {
-  if (Object.prototype.hasOwnProperty.call(REASONS, key)) {
-    REASONS[REASONS[key]] = key;
-  }
-}
 
 const SHAREBUTTON_CSS_URI = Services.io.newURI("resource://share-button-study/share_button.css");
 const PANEL_CSS_URI = Services.io.newURI("resource://share-button-study/panel.css");
@@ -329,7 +323,7 @@ this.shutdown = function(data, reason) {
 
   // are we uninstalling?
   // if so, user or automatic?
-  if (reason === REASONS.ADDON_UNINSTALL || reason === REASONS.ADDON_DISABLE) {
+  if (REASONS[reason] === "ADDON_UNINSTALL" || REASONS[reason] === "ADDON_DISABLE") {
     if (!studyUtils._isEnding) {
       // we are the first requestors, must be user action.
       studyUtils.endStudy({ reason: "user-disable" });
