@@ -1,10 +1,3 @@
-/* to use:
-
-- Recall this file has chrome privileges
-- Cu.import in this file will work for any 'general firefox things' (Services,etc)
-  but NOT for addon-specific libs
-*/
-
 /* eslint no-unused-vars: ["error", { "varsIgnorePattern": "(config|EXPORTED_SYMBOLS)" }]*/
 const EXPORTED_SYMBOLS = ["config"];
 
@@ -37,6 +30,9 @@ const config = {
   async isEligible() {
     // get whatever prefs, addons, telemetry, anything!
     // Cu.import can see 'firefox things', but not package things.
+    // In order to import addon libraries, use chrome.manifest and "resource://" in order
+    // to get the correct file location. Then it is necessary to use
+    // XPCOMUtils.defineLazyModuleGetter() to import the library.
     return true;
   },
   // addon-specific modules to load/unload during `startup`, `shutdown`
