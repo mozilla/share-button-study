@@ -3,6 +3,7 @@ Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/Console.jsm");
 Cu.import("resource://gre/modules/AppConstants.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
+Cu.import("resource://gre/modules/Preferences.jsm");
 XPCOMUtils.defineLazyModuleGetter(this, "studyUtils",
   "resource://share-button-study/StudyUtils.jsm");
 XPCOMUtils.defineLazyModuleGetter(this, "config",
@@ -19,6 +20,7 @@ const REASONS = {
   ADDON_DOWNGRADE:  8, // The add-on is being downgraded.
 };
 
+const MAX_TIMES_TO_SHOW = 5;
 const SHAREBUTTON_CSS_URI = Services.io.newURI("resource://share-button-study/share_button.css");
 const PANEL_CSS_URI = Services.io.newURI("resource://share-button-study/panel.css");
 const browserWindowWeakMap = new WeakMap();
@@ -93,13 +95,21 @@ class CopyController {
           shareButton.getAttribute("disabled") !== "true" && // the page we are on can be shared
           shareButton.getAttribute("cui-areatype") === "toolbar" && // the button is in the toolbar
           shareButton.getAttribute("overflowedItem") !== "true") { // but not in the overflow menu
+        // check to see if we should call a treatment at all
+        const numberOfTimeShown = Preferences.get("extensions.sharebuttonstudy.counter", 0);
+        if (numberOfTimeShown >= MAX_TIMES_TO_SHOW) {
+          this.treatment = null;
+        } else {
+          Preferences.set("extensions.sharebuttonstudy.counter", numberOfTimeShown + 1);
+        }
+
         if (this.treatment === "ALL") {
           Object.keys(TREATMENTS).forEach((key, index) => {
             if (Object.prototype.hasOwnProperty.call(TREATMENTS, key)) {
               TREATMENTS[key](this.browserWindow, shareButton);
             }
           });
-        } else {
+        } else if (this.treatment in TREATMENTS.keys()) {
           TREATMENTS[this.treatment](this.browserWindow, shareButton);
         }
       }
@@ -329,6 +339,9 @@ this.shutdown = function(data, reason) {
       studyUtils.endStudy({ reason: "user-disable" });
     }
   }
+
+  // TODO reset the counter preference value? Or delete?
+  Preferences.set("extensions.sharebuttonstudy.counter", 0);
 };
 
 this.uninstall = function(data, reason) {};
