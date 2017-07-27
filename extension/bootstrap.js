@@ -72,9 +72,6 @@ function doorhangerDoNothingTreatment(browserWindow, shareButton) {
 }
 
 function doorhangerAskToAddTreatment(browserWindow, shareButton) {
-  // TODO Add panel that is anchored to burger menu prompting user to add
-  // share button to toolbar.
-
   if (currentPageIsShareable(browserWindow) && !shareButtonIsUseable(shareButton)) {
     let panel = browserWindow.window.document.getElementById("share-button-ask-panel");
     if (panel === null) { // create the panel
@@ -104,6 +101,8 @@ function doorhangerAskToAddTreatment(browserWindow, shareButton) {
     const burgerMenu = browserWindow.window.document.getElementById("PanelUI-menu-button");
     // TODO What if there is no burger menu?
     if (burgerMenu !== null) {
+      // only send the telemetry ping if we actually open the panel
+      studyUtils.telemetry({ treatment: "ask-to-add" });
       panel.openPopup(burgerMenu, "bottomcenter topright", 0, 0, false, false);
     }
   } else if (shareButtonIsUseable(shareButton)) {
@@ -116,6 +115,7 @@ function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
 
   // check to see if the page will be shareable after adding the button to the toolbar
   if (currentPageIsShareable(browserWindow) && !shareButtonIsUseable(shareButton)) {
+    studyUtils.telemetry({ treatment: "add-to-toolbar" });
     CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
     // need to get using browserWindow.shareButton because the shareButton argument
     // was initialized before the button was added
