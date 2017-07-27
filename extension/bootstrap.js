@@ -332,16 +332,14 @@ this.shutdown = function(data, reason) {
   // are we uninstalling?
   // if so, user or automatic?
   if (reason === REASONS.ADDON_UNINSTALL || reason === REASONS.ADDON_DISABLE) {
+    // reset the preference in case of uninstall or disable, primarily for testing
+    // purposes
+    Preferences.set("extensions.sharebuttonstudy.counter", 0);
     if (!studyUtils._isEnding) {
       // we are the first requestors, must be user action.
       studyUtils.endStudy({ reason: "user-disable" });
     }
   }
-
-  // TODO reset the counter preference value? Or delete?
-  // FIXME Make sure the addon is being uninstalled, as shutdown is also called
-  // when Firefox is quit.
-  Preferences.set("extensions.sharebuttonstudy.counter", 0);
 };
 
 this.uninstall = function(data, reason) {};
