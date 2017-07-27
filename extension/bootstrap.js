@@ -97,20 +97,18 @@ class CopyController {
           shareButton.getAttribute("overflowedItem") !== "true") { // but not in the overflow menu
         // check to see if we should call a treatment at all
         const numberOfTimeShown = Preferences.get("extensions.sharebuttonstudy.counter", 0);
-        if (numberOfTimeShown >= MAX_TIMES_TO_SHOW) {
-          this.treatment = null;
-        } else {
+        if (numberOfTimeShown <= MAX_TIMES_TO_SHOW) {
           Preferences.set("extensions.sharebuttonstudy.counter", numberOfTimeShown + 1);
-        }
 
-        if (this.treatment === "ALL") {
-          Object.keys(TREATMENTS).forEach((key, index) => {
-            if (Object.prototype.hasOwnProperty.call(TREATMENTS, key)) {
-              TREATMENTS[key](this.browserWindow, shareButton);
-            }
-          });
-        } else if (this.treatment in TREATMENTS.keys()) {
-          TREATMENTS[this.treatment](this.browserWindow, shareButton);
+          if (this.treatment === "ALL") {
+            Object.keys(TREATMENTS).forEach((key, index) => {
+              if (Object.prototype.hasOwnProperty.call(TREATMENTS, key)) {
+                TREATMENTS[key](this.browserWindow, shareButton);
+              }
+            });
+          } else if (this.treatment in TREATMENTS.keys()) {
+            TREATMENTS[this.treatment](this.browserWindow, shareButton);
+          }
         }
       }
     }
@@ -341,6 +339,8 @@ this.shutdown = function(data, reason) {
   }
 
   // TODO reset the counter preference value? Or delete?
+  // FIXME Make sure the addon is being uninstalled, as shutdown is also called
+  // when Firefox is quit.
   Preferences.set("extensions.sharebuttonstudy.counter", 0);
 };
 

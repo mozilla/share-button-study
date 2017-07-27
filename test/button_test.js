@@ -6,6 +6,7 @@ const clipboardy = require("clipboardy");
 const firefox = require("selenium-webdriver/firefox");
 
 const Context = firefox.Context;
+const MAX_TIMES_TO_SHOW = 5; // this must match MAX_TIMES_TO_SHOW in bootstrap.js
 
 // TODO create new profile per test?
 // then we can test with a clean profile every time
@@ -54,6 +55,14 @@ describe("Add-on Functional Tests", function() {
     await utils.waitForAnimationEnd(driver);
     // close the popup
     await utils.closePanel(driver);
+    // reset the counter pref to 0 so that the treatment is always shown
+    await driver.executeAsyncScript((callback) => {
+      Components.utils.import("resource://gre/modules/Preferences.jsm");
+      if (Preferences.has("extensions.sharebuttonstudy.counter")) {
+        Preferences.set("extensions.sharebuttonstudy.counter", 0);
+      }
+      callback();
+    });
   });
 
   it("should have a URL bar", async() => {
@@ -145,6 +154,31 @@ describe("Add-on Functional Tests", function() {
     await utils.copyUrlBar(driver);
     assert(!(await utils.testPanel(driver)));
     await window.setSize(currentSize.width, currentSize.height);
+  });
+
+  it(`should only trigger MAX_TIMES_TO_SHOW = ${MAX_TIMES_TO_SHOW} times`, async() => {
+    // NOTE: if this test failes, make sure MAX_TIMES_TO_SHOW has the correct value.
+
+    // navigate to a regular page
+    driver.setContext(Context.CONTENT);
+    await driver.get("http://mozilla.org");
+    driver.setContext(Context.CHROME);
+
+    for (let i = 0; i < MAX_TIMES_TO_SHOW; i++) {
+      /* eslint-disable no-await-in-loop */
+      await utils.copyUrlBar(driver);
+      // wait for the animation to end
+      await utils.waitForAnimationEnd(driver);
+      // close the popup
+      await utils.closePanel(driver);
+      /* eslint-enable no-await-in-loop */
+    }
+    // try to open the panel again, this should fail
+    await utils.copyUrlBar(driver);
+    const panelOpened = await utils.testPanel(driver);
+    const { hasClass, hasColor } = await utils.testAnimation(driver);
+
+    assert(!panelOpened && !hasClass && !hasColor);
   });
 
   // These tests uninstall the addon before and install the addon after.
