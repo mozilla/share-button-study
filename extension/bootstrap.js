@@ -4,6 +4,7 @@ Cu.import("resource://gre/modules/Console.jsm");
 Cu.import("resource://gre/modules/AppConstants.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Preferences.jsm");
+Cu.import("resource:///modules/CustomizableUI.jsm");
 XPCOMUtils.defineLazyModuleGetter(this, "studyUtils",
   "resource://share-button-study/StudyUtils.jsm");
 XPCOMUtils.defineLazyModuleGetter(this, "config",
@@ -25,27 +26,46 @@ const SHAREBUTTON_CSS_URI = Services.io.newURI("resource://share-button-study/sh
 const PANEL_CSS_URI = Services.io.newURI("resource://share-button-study/panel.css");
 const browserWindowWeakMap = new WeakMap();
 
-function doorhangerTreatment(browserWindow, shareButton) {
-  studyUtils.telemetry({ treatment: "doorhanger" });
-  let panel = browserWindow.window.document.getElementById("share-button-panel");
-  if (panel === null) { // create the panel
-    panel = browserWindow.window.document.createElement("panel");
-    panel.setAttribute("id", "share-button-panel");
-    panel.setAttribute("type", "arrow");
-    panel.setAttribute("noautofocus", true);
-    panel.setAttribute("level", "parent");
+function doorhangerDoNothingTreatment(browserWindow, shareButton) {
+  if (shareButton !== null && // the button exists
+      shareButton.getAttribute("disabled") !== "true" && // the page we are on can be shared
+      shareButton.getAttribute("cui-areatype") === "toolbar" && // the button is in the toolbar
+      shareButton.getAttribute("overflowedItem") !== "true") { // but not in the overflow menu
+    studyUtils.telemetry({ treatment: "doorhanger" });
+    let panel = browserWindow.window.document.getElementById("share-button-panel");
+    if (panel === null) { // create the panel
+      panel = browserWindow.window.document.createElement("panel");
+      panel.setAttribute("id", "share-button-panel");
+      panel.setAttribute("type", "arrow");
+      panel.setAttribute("noautofocus", true);
+      panel.setAttribute("level", "parent");
 
-    const embeddedBrowser = browserWindow.window.document.createElement("browser");
-    embeddedBrowser.setAttribute("id", "share-button-doorhanger");
-    embeddedBrowser.setAttribute("src", "resource://share-button-study/doorhanger.html");
-    embeddedBrowser.setAttribute("type", "content");
-    embeddedBrowser.setAttribute("disableglobalhistory", "true");
-    embeddedBrowser.setAttribute("flex", "1");
+      const embeddedBrowser = browserWindow.window.document.createElement("browser");
+      embeddedBrowser.setAttribute("id", "share-button-doorhanger");
+      embeddedBrowser.setAttribute("src", "resource://share-button-study/doorhanger.html");
+      embeddedBrowser.setAttribute("type", "content");
+      embeddedBrowser.setAttribute("disableglobalhistory", "true");
+      embeddedBrowser.setAttribute("flex", "1");
 
-    panel.appendChild(embeddedBrowser);
-    browserWindow.window.document.getElementById("mainPopupSet").appendChild(panel);
+      panel.appendChild(embeddedBrowser);
+      browserWindow.window.document.getElementById("mainPopupSet").appendChild(panel);
+    }
+    panel.openPopup(shareButton, "bottomcenter topright", 0, 0, false, false);
   }
-  panel.openPopup(shareButton, "bottomcenter topright", 0, 0, false, false);
+}
+
+function doorhangerAskToAddTreatment(browserWindow, shareButton) {
+}
+
+function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
+  // FIXME do not re-add to toolbar if user removed manually?
+  const uri = browserWindow.window.gBrowser.currentURI;
+  if (uri.schemeIs("http") || uri.schemeIs("https")) {
+    CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
+    // need to get using browserWindow.shareButton because the shareButton argument
+    // was initialized before the button was added
+    doorhangerDoNothingTreatment(browserWindow, browserWindow.shareButton);
+  }
 }
 
 function highlightTreatment(browserWindow, shareButton) {
@@ -57,7 +77,9 @@ function highlightTreatment(browserWindow, shareButton) {
 
 // define treatments as STRING: fn(browserWindow, shareButton)
 const TREATMENTS = {
-  doorhanger: doorhangerTreatment,
+  doorhangerDoNothing: doorhangerDoNothingTreatment,
+  doorhangerAskToAdd: doorhangerDoNothingTreatment,
+  doorhangerAddToToolbar: doorhangerAddToToolbarTreatment,
   highlight: highlightTreatment,
 };
 
