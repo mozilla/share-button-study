@@ -26,16 +26,33 @@ const SHAREBUTTON_CSS_URI = Services.io.newURI("resource://share-button-study/sh
 const PANEL_CSS_URI = Services.io.newURI("resource://share-button-study/panel.css");
 const browserWindowWeakMap = new WeakMap();
 
+function currentPageIsShareable(browserWindow) {
+  const uri = browserWindow.window.gBrowser.currentURI;
+  return uri.schemeIs("http") || uri.schemeIs("https");
+}
+
+function shareButtonIsUseable(shareButton) {
+  return shareButton !== null && // the button exists
+    shareButton.getAttribute("disabled") !== "true" && // the page we are on can be shared
+    shareButton.getAttribute("cui-areatype") === "toolbar" && // the button is in the toolbar
+    shareButton.getAttribute("overflowedItem") !== "true"; // but not in the overflow menu"
+}
+
+function highlightTreatment(browserWindow, shareButton) {
+  studyUtils.telemetry({ treatment: "highlight" });
+  // add the event listener to remove the css class when the animation ends
+  shareButton.addEventListener("animationend", browserWindow.animationEndListener);
+  shareButton.classList.add("social-share-button-on");
+}
+
 function doorhangerDoNothingTreatment(browserWindow, shareButton) {
-  if (shareButton !== null && // the button exists
-      shareButton.getAttribute("disabled") !== "true" && // the page we are on can be shared
-      shareButton.getAttribute("cui-areatype") === "toolbar" && // the button is in the toolbar
-      shareButton.getAttribute("overflowedItem") !== "true") { // but not in the overflow menu
+  if (shareButtonIsUseable(shareButton)) {
     studyUtils.telemetry({ treatment: "doorhanger" });
     let panel = browserWindow.window.document.getElementById("share-button-panel");
     if (panel === null) { // create the panel
       panel = browserWindow.window.document.createElement("panel");
       panel.setAttribute("id", "share-button-panel");
+      panel.setAttribute("class", "no-padding-panel");
       panel.setAttribute("type", "arrow");
       panel.setAttribute("noautofocus", true);
       panel.setAttribute("level", "parent");
@@ -57,32 +74,63 @@ function doorhangerDoNothingTreatment(browserWindow, shareButton) {
 function doorhangerAskToAddTreatment(browserWindow, shareButton) {
   // TODO Add panel that is anchored to burger menu prompting user to add
   // share button to toolbar.
-}
 
-function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
-  // FIXME do not re-add to toolbar if user removed manually?
-  const uri = browserWindow.window.gBrowser.currentURI;
-  if (uri.schemeIs("http") || uri.schemeIs("https")) {
-    CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
-    // need to get using browserWindow.shareButton because the shareButton argument
-    // was initialized before the button was added
+  if (currentPageIsShareable(browserWindow) && !shareButtonIsUseable(shareButton)) {
+    let panel = browserWindow.window.document.getElementById("share-button-ask-panel");
+    if (panel === null) { // create the panel
+      panel = browserWindow.window.document.createElement("panel");
+      panel.setAttribute("id", "share-button-ask-panel");
+      panel.setAttribute("class", "no-padding-panel");
+      panel.setAttribute("type", "arrow");
+      panel.setAttribute("noautofocus", true);
+      panel.setAttribute("level", "parent");
+
+      panel.addEventListener("click", (e) => {
+        CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
+        panel.hidePopup();
+        highlightTreatment(browserWindow, browserWindow.shareButton);
+      });
+
+      const embeddedBrowser = browserWindow.window.document.createElement("browser");
+      embeddedBrowser.setAttribute("id", "share-button-ask-doorhanger");
+      embeddedBrowser.setAttribute("src", "resource://share-button-study/ask.html");
+      embeddedBrowser.setAttribute("type", "content");
+      embeddedBrowser.setAttribute("disableglobalhistory", "true");
+      embeddedBrowser.setAttribute("flex", "1");
+
+      panel.appendChild(embeddedBrowser);
+      browserWindow.window.document.getElementById("mainPopupSet").appendChild(panel);
+    }
+    const burgerMenu = browserWindow.window.document.getElementById("PanelUI-menu-button");
+    // TODO What if there is no burger menu?
+    if (burgerMenu !== null) {
+      panel.openPopup(burgerMenu, "bottomcenter topright", 0, 0, false, false);
+    }
+  } else if (shareButtonIsUseable(shareButton)) {
     doorhangerDoNothingTreatment(browserWindow, browserWindow.shareButton);
   }
 }
 
-function highlightTreatment(browserWindow, shareButton) {
-  studyUtils.telemetry({ treatment: "highlight" });
-  // add the event listener to remove the css class when the animation ends
-  shareButton.addEventListener("animationend", browserWindow.animationEndListener);
-  shareButton.classList.add("social-share-button-on");
+function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
+  // FIXME do not re-add to toolbar if user removed manually?
+
+  // check to see if the page will be shareable after adding the button to the toolbar
+  if (currentPageIsShareable(browserWindow) && !shareButtonIsUseable(shareButton)) {
+    CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
+    // need to get using browserWindow.shareButton because the shareButton argument
+    // was initialized before the button was added
+    doorhangerDoNothingTreatment(browserWindow, browserWindow.shareButton);
+  } else if (shareButtonIsUseable(shareButton)) {
+    doorhangerDoNothingTreatment(browserWindow, browserWindow.shareButton);
+  }
 }
 
 // define treatments as STRING: fn(browserWindow, shareButton)
 const TREATMENTS = {
+  highlight:              highlightTreatment,
   doorhangerDoNothing:    doorhangerDoNothingTreatment,
   doorhangerAskToAdd:     doorhangerAskToAddTreatment,
   doorhangerAddToToolbar: doorhangerAddToToolbarTreatment,
-  highlight:              highlightTreatment,
 };
 
 async function chooseVariation() {
@@ -262,6 +310,11 @@ class BrowserWindow {
     if (sharePanel !== null) {
       sharePanel.remove();
     }
+    // Remove the share-button-ask-panel
+    const shareAskPanel = this.window.document.getElementById("share-button-ask-panel");
+    if (shareAskPanel !== null) {
+      shareAskPanel.remove();
+    }
 
     // Remove modifications to shareButton (modified in CopyController)
     if (this.shareButton !== null) {
@@ -312,6 +365,8 @@ this.startup = async function(data, reason) {
   // TODO Import config.modules?
 
   if (reason === REASONS.ADDON_INSTALL) {
+    // reset to counter to 0 primarily for testing purposes
+    Preferences.set("extensions.sharebuttonstudy.counter", 0);
     studyUtils.firstSeen(); // sends telemetry "enter"
     const eligible = await config.isEligible(); // addon-specific
     if (!eligible) {
