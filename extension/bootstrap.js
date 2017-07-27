@@ -55,6 +55,8 @@ function doorhangerDoNothingTreatment(browserWindow, shareButton) {
 }
 
 function doorhangerAskToAddTreatment(browserWindow, shareButton) {
+  // TODO Add panel that is anchored to burger menu prompting user to add
+  // share button to toolbar.
 }
 
 function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
@@ -77,10 +79,10 @@ function highlightTreatment(browserWindow, shareButton) {
 
 // define treatments as STRING: fn(browserWindow, shareButton)
 const TREATMENTS = {
-  doorhangerDoNothing: doorhangerDoNothingTreatment,
-  doorhangerAskToAdd: doorhangerDoNothingTreatment,
+  doorhangerDoNothing:    doorhangerDoNothingTreatment,
+  doorhangerAskToAdd:     doorhangerAskToAddTreatment,
   doorhangerAddToToolbar: doorhangerAddToToolbarTreatment,
-  highlight: highlightTreatment,
+  highlight:              highlightTreatment,
 };
 
 async function chooseVariation() {
