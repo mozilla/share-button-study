@@ -97,7 +97,7 @@ class CopyController {
           shareButton.getAttribute("overflowedItem") !== "true") { // but not in the overflow menu
         // check to see if we should call a treatment at all
         const numberOfTimeShown = Preferences.get("extensions.sharebuttonstudy.counter", 0);
-        if (numberOfTimeShown <= MAX_TIMES_TO_SHOW) {
+        if (numberOfTimeShown < MAX_TIMES_TO_SHOW) {
           Preferences.set("extensions.sharebuttonstudy.counter", numberOfTimeShown + 1);
 
           if (this.treatment === "ALL") {

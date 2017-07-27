@@ -157,7 +157,7 @@ describe("Add-on Functional Tests", function() {
   });
 
   it(`should only trigger MAX_TIMES_TO_SHOW = ${MAX_TIMES_TO_SHOW} times`, async() => {
-    // NOTE: if this test failes, make sure MAX_TIMES_TO_SHOW has the correct value.
+    // NOTE: if this test fails, make sure MAX_TIMES_TO_SHOW has the correct value.
 
     // navigate to a regular page
     driver.setContext(Context.CONTENT);
