@@ -9,6 +9,7 @@ module.exports = {
         "no-plusplus": "off",
         "func-names": "off",
         "class-methods-use-this": "off",
-        "no-restricted-syntax": "off"
+        "no-restricted-syntax": "off",
+        "no-underscore-dangle": "off"
     }
 };

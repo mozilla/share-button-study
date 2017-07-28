@@ -2,12 +2,29 @@ const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/Console.jsm");
 Cu.import("resource://gre/modules/AppConstants.jsm");
+Cu.import("resource://gre/modules/XPCOMUtils.jsm");
+XPCOMUtils.defineLazyModuleGetter(this, "studyUtils",
+  "resource://share-button-study/StudyUtils.jsm");
+XPCOMUtils.defineLazyModuleGetter(this, "config",
+  "resource://share-button-study/Config.jsm");
+
+const REASONS = {
+  APP_STARTUP:      1, // The application is starting up.
+  APP_SHUTDOWN:     2, // The application is shutting down.
+  ADDON_ENABLE:     3, // The add-on is being enabled.
+  ADDON_DISABLE:    4, // The add-on is being disabled. (Also sent during uninstallation)
+  ADDON_INSTALL:    5, // The add-on is being installed.
+  ADDON_UNINSTALL:  6, // The add-on is being uninstalled.
+  ADDON_UPGRADE:    7, // The add-on is being upgraded.
+  ADDON_DOWNGRADE:  8, // The add-on is being downgraded.
+};
 
 const SHAREBUTTON_CSS_URI = Services.io.newURI("resource://share-button-study/share_button.css");
 const PANEL_CSS_URI = Services.io.newURI("resource://share-button-study/panel.css");
 const browserWindowWeakMap = new WeakMap();
 
 function doorhangerTreatment(browserWindow, shareButton) {
+  studyUtils.telemetry({ treatment: "doorhanger" });
   let panel = browserWindow.window.document.getElementById("share-button-panel");
   if (panel === null) { // create the panel
     panel = browserWindow.window.document.createElement("panel");
@@ -30,6 +47,7 @@ function doorhangerTreatment(browserWindow, shareButton) {
 }
 
 function highlightTreatment(browserWindow, shareButton) {
+  studyUtils.telemetry({ treatment: "highlight" });
   // add the event listener to remove the css class when the animation ends
   shareButton.addEventListener("animationend", browserWindow.animationEndListener);
   shareButton.classList.add("social-share-button-on");
@@ -37,15 +55,30 @@ function highlightTreatment(browserWindow, shareButton) {
 
 // define treatments as STRING: fn(browserWindow, shareButton)
 const TREATMENTS = {
-  DOORHANGER: doorhangerTreatment,
-  HIGHLIGHT: highlightTreatment,
+  doorhanger: doorhangerTreatment,
+  highlight: highlightTreatment,
 };
+
+async function chooseVariation() {
+  let variation;
+  const sample = studyUtils.sample;
+
+  if (config.study.variation) {
+    variation = config.study.variation;
+  } else {
+    // this is the standard arm choosing method
+    const clientId = await studyUtils.getTelemetryId();
+    const hashFraction = await sample.hashFraction(config.study.studyName + clientId);
+    variation = sample.chooseWeighted(config.study.weightedVariations, hashFraction);
+  }
+  return variation;
+}
 
 class CopyController {
   // See https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XUL/Property/controllers
   constructor(browserWindow) {
     this.browserWindow = browserWindow;
-    this.treatment = "ALL";
+    this.treatment = studyUtils.getVariation().name;
   }
 
   supportsCommand(cmd) { return cmd === "cmd_copy" || cmd === "share-button-study"; }
@@ -54,6 +87,7 @@ class CopyController {
 
   doCommand(cmd) {
     if (cmd === "cmd_copy") {
+      studyUtils.telemetry({ event: "copy" });
       const shareButton = this.browserWindow.shareButton;
       if (shareButton !== null && // the button exists
           shareButton.getAttribute("disabled") !== "true" && // the page we are on can be shared
@@ -232,7 +266,33 @@ const windowListener = {
 
 this.install = function(data, reason) {};
 
-this.startup = function(data, reason) {
+this.startup = async function(data, reason) {
+  studyUtils.setup({
+    studyName: config.study.studyName,
+    endings: config.study.endings,
+    addon: { id: data.id, version: data.version },
+    telemetry: config.study.telemetry,
+  });
+  studyUtils.setLoggingLevel(config.log.studyUtils.level);
+  const variation = await chooseVariation();
+  studyUtils.setVariation(variation);
+
+  // TODO Import config.modules?
+
+  if (reason === REASONS.ADDON_INSTALL) {
+    studyUtils.firstSeen(); // sends telemetry "enter"
+    const eligible = await config.isEligible(); // addon-specific
+    if (!eligible) {
+      // uses config.endings.ineligible.url if any,
+      // sends UT for "ineligible"
+      // then uninstalls addon
+      await studyUtils.endStudy({ reason: "ineligible" });
+      return;
+    }
+  }
+  // sets experiment as active and sends installed telemetry
+  await studyUtils.startup({ reason });
+
   // iterate over all open windows
   const windowEnumerator = Services.wm.getEnumerator("navigator:browser");
   while (windowEnumerator.hasMoreElements()) {
@@ -256,6 +316,17 @@ this.shutdown = function(data, reason) {
     if (browserWindowWeakMap.has(window)) {
       const browserWindow = browserWindowWeakMap.get(window);
       browserWindow.shutdown();
+    }
+  }
+
+  // TODO Unload modules?
+
+  // are we uninstalling?
+  // if so, user or automatic?
+  if (reason === REASONS.ADDON_UNINSTALL || reason === REASONS.ADDON_DISABLE) {
+    if (!studyUtils._isEnding) {
+      // we are the first requestors, must be user action.
+      studyUtils.endStudy({ reason: "user-disable" });
     }
   }
 };

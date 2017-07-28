@@ -6,3 +6,5 @@ doorhanger.html
 doorhanger.css
 panel.css
 share.svg
+StudyUtils.jsm
+Config.jsm

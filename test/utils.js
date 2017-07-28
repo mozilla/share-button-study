@@ -201,3 +201,22 @@ module.exports.closePanel = async(driver) => {
   const urlbar = await module.exports.promiseUrlBar(driver);
   await urlbar.sendKeys(webdriver.Key.ESCAPE);
 };
+
+// Returns array of pings of type `type` in sorted order by timestamp
+// first element is most recent ping
+// as seen in shield-study-addon-util's `utils.jsm`
+module.exports.getMostRecentPingsByType = async(driver, type) =>
+  driver.executeAsyncScript(async() => {
+    const typeArg = arguments[0];
+    const callback = arguments[arguments.length - 1];
+
+    Components.utils.import("resource://gre/modules/TelemetryArchive.jsm");
+    const pings = await TelemetryArchive.promiseArchivedPingList();
+
+    const filteredPings = pings.filter(p => p.type === typeArg);
+    filteredPings.sort((a, b) => b.timestampCreated - a.timestampCreated);
+
+    const pingData = filteredPings.map(ping => TelemetryArchive.promiseArchivedPingById(ping.id));
+
+    callback(await Promise.all(pingData));
+  }, type);
