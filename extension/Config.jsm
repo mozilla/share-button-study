@@ -4,9 +4,7 @@ const EXPORTED_SYMBOLS = ["config"];
 const config = {
   study: {
     studyName: "share-button-study", // no spaces, for all the reasons
-    variation: {
-      name: "doorhangerAskToAdd", // TODO Move to Firefox preference so that we can override in testing
-    }, // optional, use to override/decide
+    variation: { }, // optional, use to override/decide;
     weightedVariations: [
       { name: "control", weight: 1 },
       { name: "doorhanger", weight: 1 },

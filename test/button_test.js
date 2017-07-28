@@ -33,37 +33,59 @@ async function regularPagePopupTest(driver) {
   assert(panelOpened);
 }
 
-describe("Add-on Functional Tests", function() {
+async function overflowMenuTest(driver) {
+  const window = driver.manage().window();
+  const currentSize = await window.getSize();
+  await window.setSize(640, 480);
+  await utils.copyUrlBar(driver);
+  assert(!(await utils.testPanel(driver)));
+  await window.setSize(currentSize.width, currentSize.height);
+}
+
+async function postTestReset(driver) {
+  // wait for the animation to end before running subsequent tests
+  await utils.waitForAnimationEnd(driver);
+  // close the popup
+  await utils.closePanel(driver);
+  // reset the counter pref to 0 so that the treatment is always shown
+  await driver.executeAsyncScript((...args) => {
+    const callback = args[args.length - 1];
+    Components.utils.import("resource://gre/modules/Preferences.jsm");
+    const COUNTER_PREF = "extensions.sharebuttonstudy.counter";
+    if (Preferences.has(COUNTER_PREF)) {
+      Preferences.set(COUNTER_PREF, 0);
+    }
+    callback();
+  });
+}
+
+async function setTreatment(driver, treatment) {
+  return driver.executeAsyncScript((...args) => {
+    const callback = args[args.length - 1];
+    Components.utils.import("resource://gre/modules/Preferences.jsm");
+    // using the rest parameters, treatment = args[0]
+    Preferences.set("extensions.sharebuttonstudy.treatment", args[0]);
+    callback();
+  }, treatment);
+}
+
+describe("Basic Functional Tests", function() {
   // This gives Firefox time to start, and us a bit longer during some of the tests.
   this.timeout(15000);
 
   let driver;
-  let addonId;
 
   before(async() => {
     driver = await utils.promiseSetupDriver();
     // install the addon
-    addonId = await utils.installAddon(driver);
+    await utils.installAddon(driver);
     // add the share-button to the toolbar
     await utils.addShareButton(driver);
   });
 
   after(() => driver.quit());
 
-  afterEach(async() => {
-    // wait for the animation to end before running subsequent tests
-    await utils.waitForAnimationEnd(driver);
-    // close the popup
-    await utils.closePanel(driver);
-    // reset the counter pref to 0 so that the treatment is always shown
-    await driver.executeAsyncScript((callback) => {
-      Components.utils.import("resource://gre/modules/Preferences.jsm");
-      if (Preferences.has("extensions.sharebuttonstudy.counter")) {
-        Preferences.set("extensions.sharebuttonstudy.counter", 0);
-      }
-      callback();
-    });
-  });
+  afterEach(async() => postTestReset(driver));
 
   it("should have a URL bar", async() => {
     const urlBar = await utils.promiseUrlBar(driver);
@@ -71,7 +93,7 @@ describe("Add-on Functional Tests", function() {
     assert.equal(text, "Search or enter address");
   });
 
-  it("should have a toolbar button", async() => {
+  it("should have a share button", async() => {
     const button = await utils.promiseAddonButton(driver);
     const text = await button.getAttribute("tooltiptext");
     assert.equal(text, "Share this page");
@@ -93,31 +115,78 @@ describe("Add-on Functional Tests", function() {
     const clipboard = await clipboardy.read();
     assert(clipboard === testText);
   });
+});
 
-  it("animation should not trigger on disabled page", async() => {
-    // navigate to a disabled page
-    driver.setContext(Context.CONTENT);
-    await driver.get("about:blank");
-    driver.setContext(Context.CHROME);
+describe("Advanced Functional Tests", function() {
+  // This gives Firefox time to start, and us a bit longer during some of the tests.
+  this.timeout(15000);
 
-    await utils.copyUrlBar(driver);
-    const { hasClass, hasColor } = await utils.testAnimation(driver);
-    assert(!hasClass && !hasColor);
+  let driver;
+  let addonId;
+
+  before(async() => {
+    driver = await utils.promiseSetupDriver();
   });
 
-  it("popup should not trigger on disabled page", async() => {
-    // navigate to a regular page
-    driver.setContext(Context.CONTENT);
-    await driver.get("about:blank");
-    driver.setContext(Context.CHROME);
+  after(() => driver.quit());
 
-    await utils.copyUrlBar(driver);
-    const panelOpened = await utils.testPanel(driver);
-    assert(!panelOpened);
+  afterEach(async() => postTestReset(driver));
+
+  describe("Highlight Treatment Tests", () => {
+    before(async() => {
+      await setTreatment(driver, "highlight");
+      // install the addon
+      addonId = await utils.installAddon(driver);
+    });
+
+    after(async() => {
+      await utils.uninstallAddon(driver, addonId);
+    });
+
+    it("animation should trigger on regular page", () => regularPageAnimationTest(driver));
+
+    it("animation should not trigger on disabled page", async() => {
+      // navigate to a disabled page
+      driver.setContext(Context.CONTENT);
+      await driver.get("about:blank");
+      driver.setContext(Context.CHROME);
+
+      await utils.copyUrlBar(driver);
+      const { hasClass, hasColor } = await utils.testAnimation(driver);
+      assert(!hasClass && !hasColor);
+    });
+
+    it("should not trigger treatments if the share button is in the overflow menu", () => overflowMenuTest());
   });
 
-  it("animation should trigger on regular page", () => regularPageAnimationTest(driver));
+  describe("DoorhangerDoNothing Treatment Tests", () => {
+    before(async() => {
+      await setTreatment(driver, "doorhangerDoNothing");
+      // install the addon
+      addonId = await utils.installAddon(driver);
+    });
 
+    after(async() => {
+      await utils.uninstallAddon(driver, addonId);
+    });
+
+    it("popup should trigger on regular page", () => regularPagePopupTest(driver));
+
+    it("popup should not trigger on disabled page", async() => {
+      // navigate to a regular page
+      driver.setContext(Context.CONTENT);
+      await driver.get("about:blank");
+      driver.setContext(Context.CHROME);
+
+      await utils.copyUrlBar(driver);
+      const panelOpened = await utils.testPanel(driver);
+      assert(!panelOpened);
+    });
+
+    it("should not trigger treatments if the share button is in the overflow menu", () => overflowMenuTest());
+  });
+
+  // TODO Move the telemetry test to a helper, utils? This test file is getting crowded.
   it("should send telemetry pings for animation, doorhanger, and copy", async() => {
     // navigate to a regular page
     driver.setContext(Context.CONTENT);
@@ -145,15 +214,29 @@ describe("Add-on Functional Tests", function() {
     assert(highlightTelemetrySent && doorHangerTelemetrySent && copyTelemetrySent);
   });
 
-  it("popup should trigger on regular page", () => regularPagePopupTest(driver));
+  it(`should only trigger MAX_TIMES_TO_SHOW = ${MAX_TIMES_TO_SHOW} times`, async() => {
+    // NOTE: if this test fails, make sure MAX_TIMES_TO_SHOW has the correct value.
 
-  it("should not trigger treatments if the share button is in the overflow menu", async() => {
-    const window = driver.manage().window();
-    const currentSize = await window.getSize();
-    await window.setSize(640, 480);
+    // navigate to a regular page
+    driver.setContext(Context.CONTENT);
+    await driver.get("http://mozilla.org");
+    driver.setContext(Context.CHROME);
+
+    for (let i = 0; i < MAX_TIMES_TO_SHOW; i++) {
+      /* eslint-disable no-await-in-loop */
+      await utils.copyUrlBar(driver);
+      // wait for the animation to end
+      await utils.waitForAnimationEnd(driver);
+      // close the popup
+      await utils.closePanel(driver);
+      /* eslint-enable no-await-in-loop */
+    }
+    // try to open the panel again, this should fail
     await utils.copyUrlBar(driver);
-    assert(!(await utils.testPanel(driver)));
-    await window.setSize(currentSize.width, currentSize.height);
+    const panelOpened = await utils.testPanel(driver);
+    const { hasClass, hasColor } = await utils.testAnimation(driver);
+
+    assert(!panelOpened && !hasClass && !hasColor);
   });
 
   it(`should only trigger MAX_TIMES_TO_SHOW = ${MAX_TIMES_TO_SHOW} times`, async() => {
@@ -222,12 +305,7 @@ describe("New Window Add-on Functional Tests", function() {
 
   after(() => driver.quit());
 
-  afterEach(async() => {
-    // wait for the animation to end before running subsequent tests
-    await utils.waitForAnimationEnd(driver);
-    // close the popup
-    await utils.closePanel(driver);
-  });
+  afterEach(async() => postTestReset(driver));
 
   it("animation should trigger on regular page", async() => regularPageAnimationTest(driver));
 

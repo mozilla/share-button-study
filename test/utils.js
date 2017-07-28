@@ -206,9 +206,9 @@ module.exports.closePanel = async(driver) => {
 // first element is most recent ping
 // as seen in shield-study-addon-util's `utils.jsm`
 module.exports.getMostRecentPingsByType = async(driver, type) =>
-  driver.executeAsyncScript(async() => {
-    const typeArg = arguments[0];
-    const callback = arguments[arguments.length - 1];
+  driver.executeAsyncScript(async(...args) => {
+    const typeArg = args[0];
+    const callback = args[args.length - 1];
 
     Components.utils.import("resource://gre/modules/TelemetryArchive.jsm");
     const pings = await TelemetryArchive.promiseArchivedPingList();

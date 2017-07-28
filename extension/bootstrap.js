@@ -20,7 +20,8 @@ const REASONS = {
   ADDON_UPGRADE:    7, // The add-on is being upgraded.
   ADDON_DOWNGRADE:  8, // The add-on is being downgraded.
 };
-
+const COUNTER_PREF = "extensions.sharebuttonstudy.counter";
+const TREATMENT_OVERRIDE_PREF = "extensions.sharebuttonstudy.treatment";
 const MAX_TIMES_TO_SHOW = 5;
 const SHAREBUTTON_CSS_URI = Services.io.newURI("resource://share-button-study/share_button.css");
 const PANEL_CSS_URI = Services.io.newURI("resource://share-button-study/panel.css");
@@ -111,7 +112,7 @@ function doorhangerAskToAddTreatment(browserWindow, shareButton) {
 }
 
 function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
-  // FIXME do not re-add to toolbar if user removed manually?
+  // TODO do not re-add to toolbar if user removed manually?
 
   // check to see if the page will be shareable after adding the button to the toolbar
   if (currentPageIsShareable(browserWindow) && !shareButtonIsUseable(shareButton)) {
@@ -134,16 +135,17 @@ const TREATMENTS = {
 };
 
 async function chooseVariation() {
-  let variation;
   const sample = studyUtils.sample;
+  // this is the standard arm choosing method
+  const clientId = await studyUtils.getTelemetryId();
+  const hashFraction = await sample.hashFraction(config.study.studyName + clientId);
+  let variation = sample.chooseWeighted(config.study.weightedVariations, hashFraction);
 
-  if (config.study.variation) {
-    variation = config.study.variation;
-  } else {
-    // this is the standard arm choosing method
-    const clientId = await studyUtils.getTelemetryId();
-    const hashFraction = await sample.hashFraction(config.study.studyName + clientId);
-    variation = sample.chooseWeighted(config.study.weightedVariations, hashFraction);
+  // if pref has a user-set value, use this instead
+  if (Preferences.isSet(TREATMENT_OVERRIDE_PREF)) {
+    variation = { name: Preferences.get(TREATMENT_OVERRIDE_PREF, variation),
+      weight: 1 };
+    Preferences.reset(TREATMENT_OVERRIDE_PREF); // reset to default branch value to clear
   }
   return variation;
 }
@@ -163,25 +165,12 @@ class CopyController {
     if (cmd === "cmd_copy") {
       studyUtils.telemetry({ event: "copy" });
       const shareButton = this.browserWindow.shareButton;
-      if (shareButton !== null && // the button exists
-          shareButton.getAttribute("disabled") !== "true" && // the page we are on can be shared
-          shareButton.getAttribute("cui-areatype") === "toolbar" && // the button is in the toolbar
-          shareButton.getAttribute("overflowedItem") !== "true") { // but not in the overflow menu
-        // check to see if we should call a treatment at all
-        const numberOfTimeShown = Preferences.get("extensions.sharebuttonstudy.counter", 0);
-        if (numberOfTimeShown < MAX_TIMES_TO_SHOW) {
-          Preferences.set("extensions.sharebuttonstudy.counter", numberOfTimeShown + 1);
-
-          if (this.treatment === "ALL") {
-            Object.keys(TREATMENTS).forEach((key, index) => {
-              if (Object.prototype.hasOwnProperty.call(TREATMENTS, key)) {
-                TREATMENTS[key](this.browserWindow, shareButton);
-              }
-            });
-          } else if (this.treatment in TREATMENTS.keys()) {
-            TREATMENTS[this.treatment](this.browserWindow, shareButton);
-          }
-        }
+      // check to see if we should call a treatment at all
+      const numberOfTimeShown = Preferences.get(COUNTER_PREF, 0);
+      if (numberOfTimeShown < MAX_TIMES_TO_SHOW &&
+          Object.keys(TREATMENTS).includes(this.treatment)) {
+        Preferences.set(COUNTER_PREF, numberOfTimeShown + 1);
+        TREATMENTS[this.treatment](this.browserWindow, shareButton);
       }
     }
     // Iterate over all other controllers and call doCommand on the first controller
@@ -366,7 +355,7 @@ this.startup = async function(data, reason) {
 
   if (reason === REASONS.ADDON_INSTALL) {
     // reset to counter to 0 primarily for testing purposes
-    Preferences.set("extensions.sharebuttonstudy.counter", 0);
+    Preferences.set(COUNTER_PREF, 0);
     studyUtils.firstSeen(); // sends telemetry "enter"
     const eligible = await config.isEligible(); // addon-specific
     if (!eligible) {
@@ -411,9 +400,8 @@ this.shutdown = function(data, reason) {
   // are we uninstalling?
   // if so, user or automatic?
   if (reason === REASONS.ADDON_UNINSTALL || reason === REASONS.ADDON_DISABLE) {
-    // reset the preference in case of uninstall or disable, primarily for testing
-    // purposes
-    Preferences.set("extensions.sharebuttonstudy.counter", 0);
+    // reset the preference in case of uninstall or disable, primarily for testing purposes
+    Preferences.set(COUNTER_PREF, 0);
     if (!studyUtils._isEnding) {
       // we are the first requestors, must be user action.
       studyUtils.endStudy({ reason: "user-disable" });
