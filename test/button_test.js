@@ -121,6 +121,31 @@ describe("Basic Functional Tests", function() {
     const clipboard = await clipboardy.read();
     assert(clipboard === testText);
   });
+
+  it(`should only trigger MAX_TIMES_TO_SHOW = ${MAX_TIMES_TO_SHOW} times`, async() => {
+    // NOTE: if this test fails, make sure MAX_TIMES_TO_SHOW has the correct value.
+
+    // navigate to a regular page
+    driver.setContext(Context.CONTENT);
+    await driver.get("http://mozilla.org");
+    driver.setContext(Context.CHROME);
+
+    for (let i = 0; i < MAX_TIMES_TO_SHOW; i++) {
+      /* eslint-disable no-await-in-loop */
+      await utils.copyUrlBar(driver);
+      // wait for the animation to end
+      await utils.waitForAnimationEnd(driver);
+      // close the popup
+      await utils.closePanel(driver);
+      /* eslint-enable no-await-in-loop */
+    }
+    // try to open the panel again, this should fail
+    await utils.copyUrlBar(driver);
+    const panelOpened = await utils.testPanel(driver);
+    const { hasClass, hasColor } = await utils.testAnimation(driver);
+
+    assert(!panelOpened && !hasClass && !hasColor);
+  });
 });
 
 describe("Highlight Treatment Tests", function() {
@@ -463,31 +488,6 @@ describe("DoorhangerAddToToolbar Treatment Tests", function() {
   });
 });
 
-//  it(`should only trigger MAX_TIMES_TO_SHOW = ${MAX_TIMES_TO_SHOW} times`, async() => {
-//    // NOTE: if this test fails, make sure MAX_TIMES_TO_SHOW has the correct value.
-//
-//    // navigate to a regular page
-//    driver.setContext(Context.CONTENT);
-//    await driver.get("http://mozilla.org");
-//    driver.setContext(Context.CHROME);
-//
-//    for (let i = 0; i < MAX_TIMES_TO_SHOW; i++) {
-//      /* eslint-disable no-await-in-loop */
-//      await utils.copyUrlBar(driver);
-//      // wait for the animation to end
-//      await utils.waitForAnimationEnd(driver);
-//      // close the popup
-//      await utils.closePanel(driver);
-//      /* eslint-enable no-await-in-loop */
-//    }
-//    // try to open the panel again, this should fail
-//    await utils.copyUrlBar(driver);
-//    const panelOpened = await utils.testPanel(driver);
-//    const { hasClass, hasColor } = await utils.testAnimation(driver);
-//
-//    assert(!panelOpened && !hasClass && !hasColor);
-//  });
-
 /*
   // These tests uninstall the addon before and install the addon after.
   // This lets us assume the addon is installed at the start of each test.
@@ -535,6 +535,4 @@ describe("New Window Add-on Functional Tests", function() {
   afterEach(async() => postTestReset(driver));
 
   it("animation should trigger on regular page", async() => regularPageAnimationTest(driver));
-
-  it("popup should trigger on regular page", async() => regularPagePopupTest(driver));
 });
