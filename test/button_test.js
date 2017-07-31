@@ -7,10 +7,8 @@ const assert = require("assert");
 const utils = require("./utils");
 const clipboardy = require("clipboardy");
 const webdriver = require("selenium-webdriver");
-const firefox = require("selenium-webdriver/firefox");
 
 const By = webdriver.By;
-const Context = firefox.Context;
 const until = webdriver.until;
 const MAX_TIMES_TO_SHOW = 5; // this must match MAX_TIMES_TO_SHOW in bootstrap.js
 
