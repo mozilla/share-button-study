@@ -75,7 +75,9 @@ function doorhangerDoNothingTreatment(browserWindow, shareButton) {
 }
 
 function doorhangerAskToAddTreatment(browserWindow, shareButton) {
-  if (currentPageIsShareable(browserWindow) && !shareButtonIsUseable(shareButton)) {
+  // check to see if we can share the page and if the share button has not yet been added
+  // if it ghas been added, we do not want to prompt to add
+  if (currentPageIsShareable(browserWindow) && shareButton === null) {
     let panel = browserWindow.window.document.getElementById("share-button-ask-panel");
     if (panel === null) { // create the panel
       panel = browserWindow.window.document.createElement("panel");
