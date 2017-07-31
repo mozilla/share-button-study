@@ -26,7 +26,7 @@ const Context = firefox.Context;
       // using the rest parameters, treatment = args[0]
       Preferences.set("extensions.sharebuttonstudy.treatment", args[0]);
       callback();
-    }, "highlight");
+    }, "doorhangerDoNothing");
     // install the addon
     await utils.installAddon(driver);
 
