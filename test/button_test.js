@@ -1,5 +1,8 @@
 /* eslint-env node, mocha */
 
+// for unhandled promise rejection debugging
+process.on("unhandledRejection", r => console.log(r)); // eslint-disable-line no-console
+
 const assert = require("assert");
 const utils = require("./utils");
 const clipboardy = require("clipboardy");
@@ -117,9 +120,9 @@ describe("Basic Functional Tests", function() {
   });
 });
 
-describe("Advanced Functional Tests", function() {
+describe.only("Advanced Functional Tests", function() {
   // This gives Firefox time to start, and us a bit longer during some of the tests.
-  this.timeout(15000);
+  this.timeout(45000);
 
   let driver;
   let addonId;
@@ -132,7 +135,7 @@ describe("Advanced Functional Tests", function() {
 
   afterEach(async() => postTestReset(driver));
 
-  describe("Highlight Treatment Tests", () => {
+  describe.only("Highlight Treatment Tests", () => {
     before(async() => {
       await setTreatment(driver, "highlight");
       // install the addon
@@ -143,9 +146,18 @@ describe("Advanced Functional Tests", function() {
       await utils.uninstallAddon(driver, addonId);
     });
 
-    it("animation should trigger on regular page", () => regularPageAnimationTest(driver));
+    afterEach(async() => {
+      await postTestReset(driver);
+      await utils.removeShareButton(driver);
+    });
+
+    it("animation should trigger on regular page", async() => {
+      await utils.addShareButton(driver);
+      await regularPageAnimationTest(driver);
+    });
 
     it("animation should not trigger on disabled page", async() => {
+      await utils.addShareButton(driver);
       // navigate to a disabled page
       driver.setContext(Context.CONTENT);
       await driver.get("about:blank");
@@ -156,7 +168,44 @@ describe("Advanced Functional Tests", function() {
       assert(!hasClass && !hasColor);
     });
 
-    it("should not trigger treatments if the share button is in the overflow menu", () => overflowMenuTest());
+    it("animation should not trigger if the share button is not added to toolbar", async() => {
+      // navigate to a regular page
+      driver.setContext(Context.CONTENT);
+      await driver.get("http://mozilla.org");
+      driver.setContext(Context.CHROME);
+
+      await utils.copyUrlBar(driver);
+      const { hasClass, hasColor } = await utils.testAnimation(driver);
+      assert(!hasClass && !hasColor);
+    });
+
+    it("should not trigger treatments if the share button is in the overflow menu", async() => {
+      await utils.addShareButton(driver);
+      overflowMenuTest(driver);
+    });
+
+    it("should have sent highlight and copy telemetry pings", async() => {
+      // navigate to a regular page
+      driver.setContext(Context.CONTENT);
+      await driver.get("http://mozilla.org");
+      driver.setContext(Context.CHROME);
+
+      await utils.copyUrlBar(driver);
+      const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+
+      let highlightTelemetrySent = false;
+      let copyTelemetrySent = false;
+      for (const ping of pings) {
+        if (ping.payload.data.attributes.treatment === "highlight") {
+          highlightTelemetrySent = true;
+        }
+        if (ping.payload.data.attributes.event === "copy") {
+          copyTelemetrySent = true;
+        }
+        if (highlightTelemetrySent && copyTelemetrySent) break;
+      }
+      assert(highlightTelemetrySent && copyTelemetrySent);
+    });
   });
 
   describe("DoorhangerDoNothing Treatment Tests", () => {
@@ -170,9 +219,26 @@ describe("Advanced Functional Tests", function() {
       await utils.uninstallAddon(driver, addonId);
     });
 
-    it("popup should trigger on regular page", () => regularPagePopupTest(driver));
+    it("popup should trigger on regular page", async() => {
+      await utils.addShareButton(driver);
+      regularPagePopupTest(driver);
+      await utils.removeShareButton(driver);
+    });
 
     it("popup should not trigger on disabled page", async() => {
+      await utils.addShareButton(driver);
+      // navigate to a regular page
+      driver.setContext(Context.CONTENT);
+      await driver.get("about:blank");
+      driver.setContext(Context.CHROME);
+
+      await utils.copyUrlBar(driver);
+      const panelOpened = await utils.testPanel(driver);
+      assert(!panelOpened);
+      await utils.removeShareButton(driver);
+    });
+
+    it("popup should not trigger if the share button is not added to toolbar", async() => {
       // navigate to a regular page
       driver.setContext(Context.CONTENT);
       await driver.get("about:blank");
@@ -184,6 +250,18 @@ describe("Advanced Functional Tests", function() {
     });
 
     it("should not trigger treatments if the share button is in the overflow menu", () => overflowMenuTest());
+  });
+
+  describe("DoorhangerAskToAdd Treatment Tests", () => {
+    before(async() => {
+      await setTreatment(driver, "doorhangerAskToAdd");
+      // install the addon
+      addonId = await utils.installAddon(driver);
+    });
+
+    after(async() => {
+      await utils.uninstallAddon(driver, addonId);
+    });
   });
 
   // TODO Move the telemetry test to a helper, utils? This test file is getting crowded.
@@ -239,31 +317,6 @@ describe("Advanced Functional Tests", function() {
     assert(!panelOpened && !hasClass && !hasColor);
   });
 
-  it(`should only trigger MAX_TIMES_TO_SHOW = ${MAX_TIMES_TO_SHOW} times`, async() => {
-    // NOTE: if this test fails, make sure MAX_TIMES_TO_SHOW has the correct value.
-
-    // navigate to a regular page
-    driver.setContext(Context.CONTENT);
-    await driver.get("http://mozilla.org");
-    driver.setContext(Context.CHROME);
-
-    for (let i = 0; i < MAX_TIMES_TO_SHOW; i++) {
-      /* eslint-disable no-await-in-loop */
-      await utils.copyUrlBar(driver);
-      // wait for the animation to end
-      await utils.waitForAnimationEnd(driver);
-      // close the popup
-      await utils.closePanel(driver);
-      /* eslint-enable no-await-in-loop */
-    }
-    // try to open the panel again, this should fail
-    await utils.copyUrlBar(driver);
-    const panelOpened = await utils.testPanel(driver);
-    const { hasClass, hasColor } = await utils.testAnimation(driver);
-
-    assert(!panelOpened && !hasClass && !hasColor);
-  });
-
   // These tests uninstall the addon before and install the addon after.
   // This lets us assume the addon is installed at the start of each test.
   describe("Addon uninstall tests", () => {
@@ -292,6 +345,8 @@ describe("New Window Add-on Functional Tests", function() {
 
   before(async() => {
     driver = await utils.promiseSetupDriver();
+    // set treatment
+    await utils.setTreatment(driver, "highlight");
     // install the addon
     await utils.installAddon(driver);
     // add the share-button to the toolbar

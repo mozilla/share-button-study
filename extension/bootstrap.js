@@ -40,10 +40,12 @@ function shareButtonIsUseable(shareButton) {
 }
 
 function highlightTreatment(browserWindow, shareButton) {
-  studyUtils.telemetry({ treatment: "highlight" });
-  // add the event listener to remove the css class when the animation ends
-  shareButton.addEventListener("animationend", browserWindow.animationEndListener);
-  shareButton.classList.add("social-share-button-on");
+  if (shareButtonIsUseable(shareButton)) {
+    studyUtils.telemetry({ treatment: "highlight" });
+    // add the event listener to remove the css class when the animation ends
+    shareButton.addEventListener("animationend", browserWindow.animationEndListener);
+    shareButton.classList.add("social-share-button-on");
+  }
 }
 
 function doorhangerDoNothingTreatment(browserWindow, shareButton) {

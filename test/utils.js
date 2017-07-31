@@ -71,6 +71,22 @@ module.exports.addShareButton = async driver =>
     callback();
   });
 
+module.exports.removeShareButton = async(driver) => {
+  try {
+    return driver.executeAsyncScript((callback) => {
+      Components.utils.import("resource:///modules/CustomizableUI.jsm");
+      CustomizableUI.removeWidgetFromArea("social-share-button");
+      callback();
+    });
+  } catch (e) {
+    if (e.type === "StaleElementReferenceError") {
+      console.log(e.msg); // eslint-disable-line no-console
+      return null;
+    }
+    throw (e);
+  }
+};
+
 module.exports.installAddon = async(driver) => {
   // references:
   //    https://bugzilla.mozilla.org/show_bug.cgi?id=1298025

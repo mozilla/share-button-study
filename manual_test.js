@@ -19,6 +19,14 @@ const Context = firefox.Context;
 
     // add the share-button to the toolbar
     await utils.addShareButton(driver);
+    // set the treatment
+    await driver.executeAsyncScript((...args) => {
+      const callback = args[args.length - 1];
+      Components.utils.import("resource://gre/modules/Preferences.jsm");
+      // using the rest parameters, treatment = args[0]
+      Preferences.set("extensions.sharebuttonstudy.treatment", args[0]);
+      callback();
+    }, "highlight");
     // install the addon
     await utils.installAddon(driver);
 
