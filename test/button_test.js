@@ -80,11 +80,13 @@ describe("Basic Functional Tests", function() {
   this.timeout(15000);
 
   let driver;
+  let addonId;
 
   before(async() => {
     driver = await utils.promiseSetupDriver();
+    await setTreatment(driver, "doorHangerAddToToolbar");
     // install the addon
-    await utils.installAddon(driver);
+    addonId = await utils.installAddon(driver);
     // add the share-button to the toolbar
     await utils.addShareButton(driver);
   });
@@ -145,6 +147,37 @@ describe("Basic Functional Tests", function() {
     const { hasClass, hasColor } = await utils.testAnimation(driver);
 
     assert(!panelOpened && !hasClass && !hasColor);
+  });
+
+  // These tests uninstall the addon before and install the addon after.
+  // This lets us assume the addon is installed at the start of each test.
+  describe("Addon uninstall tests", () => {
+    before(async() => utils.uninstallAddon(driver, addonId));
+
+    after(async() => utils.installAddon(driver));
+
+    it("should no longer trigger animation once uninstalled", async() => {
+      await utils.copyUrlBar(driver);
+      const { hasClass, hasColor } = await utils.testAnimation(driver);
+      assert(!hasClass && !hasColor);
+    });
+
+    it("should no longer trigger popup once uninstalled", async() => {
+      await utils.copyUrlBar(driver);
+      assert(!(await utils.testPanel(driver, "share-button-panel")));
+    });
+
+    it("should no longer trigger ask panel once uninstalled", async() => {
+      await utils.copyUrlBar(driver);
+      assert(!(await utils.testPanel(driver, "share-button-ask-panel")));
+    });
+
+    it("should not add the button to the toolbar once uninstalled", async() => {
+      await utils.removeShareButton(driver);
+      await utils.copyUrlBar(driver);
+      const shareButton = await utils.promiseAddonButton(driver);
+      assert(!shareButton);
+    });
   });
 });
 
@@ -487,27 +520,6 @@ describe("DoorhangerAddToToolbar Treatment Tests", function() {
     assert(addToToolbarSent && copyTelemetrySent);
   });
 });
-
-/*
-  // These tests uninstall the addon before and install the addon after.
-  // This lets us assume the addon is installed at the start of each test.
-  describe("Addon uninstall tests", () => {
-    before(async() => utils.uninstallAddon(driver, addonId));
-
-    after(async() => utils.installAddon(driver));
-
-    it("should no longer trigger animation once uninstalled", async() => {
-      await utils.copyUrlBar(driver);
-      const { hasClass, hasColor } = await utils.testAnimation(driver);
-      assert(!hasClass && !hasColor);
-    });
-
-    it("should no longer trigger popup once uninstalled", async() => {
-      await utils.copyUrlBar(driver);
-      assert(!(await utils.testPanel(driver)));
-    });
-  });
-}); */
 
 describe("New Window Add-on Functional Tests", function() {
   // This gives Firefox time to start, and us a bit longer during some of the tests.
