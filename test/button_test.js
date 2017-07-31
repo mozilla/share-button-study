@@ -235,7 +235,7 @@ describe("DoorhangerDoNothing Treatment Tests", function() {
 
   it("popup should not trigger on disabled page", async() => {
     await utils.addShareButton(driver);
-    // navigate to a regular page
+    // navigate to a disabled page
     driver.setContext(Context.CONTENT);
     await driver.get("about:blank");
     driver.setContext(Context.CHROME);
@@ -249,7 +249,7 @@ describe("DoorhangerDoNothing Treatment Tests", function() {
   it("popup should not trigger if the share button is not added to toolbar", async() => {
     // navigate to a regular page
     driver.setContext(Context.CONTENT);
-    await driver.get("about:blank");
+    await driver.get("http://mozilla.org");
     driver.setContext(Context.CHROME);
 
     await utils.copyUrlBar(driver);
@@ -398,6 +398,68 @@ describe("DoorhangerAskToAdd Treatment Tests", function() {
       if (askToAddTelemetrySent && copyTelemetrySent) break;
     }
     assert(askToAddTelemetrySent && copyTelemetrySent);
+  });
+});
+
+describe("DoorhangerAddToToolbar Treatment Tests", function() {
+  // This gives Firefox time to start, and us a bit longer during some of the tests.
+  this.timeout(15000);
+
+  let driver;
+  let addonId;
+
+  before(async() => {
+    driver = await utils.promiseSetupDriver();
+    await setTreatment(driver, "doorhangerAddToToolbar");
+    // install the addon
+    addonId = await utils.installAddon(driver);
+  });
+
+  after(async() => {
+    await utils.uninstallAddon(driver, addonId);
+    await driver.quit();
+  });
+
+  afterEach(async() => {
+    await postTestReset(driver);
+    await utils.removeShareButton(driver);
+  });
+
+  it("should add the button to the toolbar upon copy paste on regular page", async() => {
+    // navigate to a regular page
+    driver.setContext(Context.CONTENT);
+    await driver.get("http://mozilla.org");
+    driver.setContext(Context.CHROME);
+
+    await utils.copyUrlBar(driver);
+    assert(await utils.promiseAddonButton(driver));
+  });
+
+  it("popup should trigger on regular page", async() => {
+    await regularPagePopupTest(driver);
+  });
+
+  it("should send add-to-toolbar and copy telemetry pings", async() => {
+    // navigate to a regular page
+    driver.setContext(Context.CONTENT);
+    await driver.get("http://mozilla.org");
+    driver.setContext(Context.CHROME);
+
+    await utils.copyUrlBar(driver);
+    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+
+    let addToToolbarSent = false;
+    let copyTelemetrySent = false;
+    for (const ping of pings) {
+      if (ping.payload.data.attributes.treatment === "add-to-toolbar") {
+        addToToolbarSent = true;
+      }
+      if (ping.payload.data.attributes.event === "copy") {
+        copyTelemetrySent = true;
+      }
+      if (addToToolbarSent && copyTelemetrySent) break;
+    }
+    assert(addToToolbarSent && copyTelemetrySent);
   });
 });
 
