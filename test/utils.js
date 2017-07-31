@@ -191,20 +191,21 @@ module.exports.takeScreenshot = async(driver) => {
   }
 };
 
-module.exports.testPanel = async(driver) => {
+module.exports.testPanel = async(driver, panelId) => {
   driver.setContext(Context.CHROME);
   try { // if we can't find the panel, return false
     return await driver.wait(async() => {
       // need to execute JS, since state is not an HTML attribute, it's a property
-      const panelState = await driver.executeAsyncScript((callback) => {
-        const shareButtonPanel = window.document.getElementById("share-button-panel");
+      const panelState = await driver.executeAsyncScript((...args) => {
+        const callback = args[args.length - 1];
+        const shareButtonPanel = window.document.getElementById(args[0]);
         if (shareButtonPanel === null) {
           callback(null);
         } else {
           const state = shareButtonPanel.state;
           callback(state);
         }
-      });
+      }, panelId);
       return panelState === "open";
     }, 3000);
   } catch (e) {

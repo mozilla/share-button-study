@@ -6,9 +6,12 @@ process.on("unhandledRejection", r => console.log(r)); // eslint-disable-line no
 const assert = require("assert");
 const utils = require("./utils");
 const clipboardy = require("clipboardy");
+const webdriver = require("selenium-webdriver");
 const firefox = require("selenium-webdriver/firefox");
 
+const By = webdriver.By;
 const Context = firefox.Context;
+const until = webdriver.until;
 const MAX_TIMES_TO_SHOW = 5; // this must match MAX_TIMES_TO_SHOW in bootstrap.js
 
 // TODO create new profile per test?
@@ -32,7 +35,7 @@ async function regularPagePopupTest(driver) {
   driver.setContext(Context.CHROME);
 
   await utils.copyUrlBar(driver);
-  const panelOpened = await utils.testPanel(driver);
+  const panelOpened = await utils.testPanel(driver, "share-button-panel");
   assert(panelOpened);
 }
 
@@ -41,7 +44,7 @@ async function overflowMenuTest(driver) {
   const currentSize = await window.getSize();
   await window.setSize(640, 480);
   await utils.copyUrlBar(driver);
-  assert(!(await utils.testPanel(driver)));
+  assert(!(await utils.testPanel(driver, "share-button-panel")));
   await window.setSize(currentSize.width, currentSize.height);
 }
 
@@ -238,7 +241,7 @@ describe("DoorhangerDoNothing Treatment Tests", function() {
     driver.setContext(Context.CHROME);
 
     await utils.copyUrlBar(driver);
-    const panelOpened = await utils.testPanel(driver);
+    const panelOpened = await utils.testPanel(driver, "share-button-panel");
     assert(!panelOpened);
     await utils.removeShareButton(driver);
   });
@@ -250,7 +253,7 @@ describe("DoorhangerDoNothing Treatment Tests", function() {
     driver.setContext(Context.CHROME);
 
     await utils.copyUrlBar(driver);
-    const panelOpened = await utils.testPanel(driver);
+    const panelOpened = await utils.testPanel(driver, "share-button-panel");
     assert(!panelOpened);
   });
 
@@ -283,17 +286,120 @@ describe("DoorhangerDoNothing Treatment Tests", function() {
   });
 });
 
-/*  describe("DoorhangerAskToAdd Treatment Tests", () => {
-    before(async() => {
-      await setTreatment(driver, "doorhangerAskToAdd");
-      // install the addon
-      addonId = await utils.installAddon(driver);
-    });
+describe("DoorhangerAskToAdd Treatment Tests", function() {
+  // This gives Firefox time to start, and us a bit longer during some of the tests.
+  this.timeout(15000);
 
-    after(async() => {
-      await utils.uninstallAddon(driver, addonId);
-    });
-  }); */
+  let driver;
+  let addonId;
+
+  before(async() => {
+    driver = await utils.promiseSetupDriver();
+    await setTreatment(driver, "doorhangerAskToAdd");
+    // install the addon
+    addonId = await utils.installAddon(driver);
+  });
+
+  after(async() => {
+    await utils.uninstallAddon(driver, addonId);
+    await driver.quit();
+  });
+
+  afterEach(async() => {
+    await postTestReset(driver);
+    await utils.removeShareButton(driver);
+  });
+
+  it("should open an ask panel on a regular page without the share button", async() => {
+    // navigate to a regular page
+    driver.setContext(Context.CONTENT);
+    await driver.get("http://mozilla.org");
+    driver.setContext(Context.CHROME);
+
+    await utils.copyUrlBar(driver);
+    const panelOpened = await utils.testPanel(driver, "share-button-ask-panel");
+    assert(panelOpened);
+  });
+
+  it("should open a standard panel on a regular page with the share button", async() => {
+    await utils.addShareButton(driver);
+    await regularPagePopupTest(driver);
+  });
+
+  it("should not open an ask panel on a regular page with the share button", async() => {
+    await utils.addShareButton(driver);
+
+    // navigate to a regular page
+    driver.setContext(Context.CONTENT);
+    await driver.get("http://github.com/mozilla");
+    driver.setContext(Context.CHROME);
+
+    await utils.copyUrlBar(driver);
+    const askPanelOpened = await utils.testPanel(driver, "share-button-ask-panel");
+    assert(!askPanelOpened);
+  });
+
+  it("should not open an ask panel on a regular page if the share button is in the overflow menu", async() => {
+    await utils.addShareButton(driver);
+
+    const window = driver.manage().window();
+    const currentSize = await window.getSize();
+    await window.setSize(640, 480);
+    await utils.copyUrlBar(driver);
+    assert(!await utils.testPanel(driver, "share-button-ask-panel"));
+    await window.setSize(currentSize.width, currentSize.height);
+  });
+
+  it("should not open an ask panel on a disabled page", async() => {
+    // navigate to a disabled page
+    driver.setContext(Context.CONTENT);
+    await driver.get("about:blank");
+    driver.setContext(Context.CHROME);
+
+    await utils.copyUrlBar(driver);
+    const panelOpened = await utils.testPanel(driver, "share-button-ask-panel");
+    assert(!panelOpened);
+  });
+
+  it("should add the button to the toolbar upon clicking on ask panel", async() => {
+    // navigate to a regular page
+    driver.setContext(Context.CONTENT);
+    await driver.get("http://mozilla.org");
+    driver.setContext(Context.CHROME);
+
+    await utils.copyUrlBar(driver);
+    const panelOpened = await utils.testPanel(driver, "share-button-ask-panel");
+    assert(panelOpened);
+
+    const askPanel = driver.wait(until.elementLocated(
+      By.id("share-button-ask-panel")), 1000);
+    await askPanel.click();
+    assert(await utils.promiseAddonButton(driver));
+  });
+
+  it("should send ask-to-add and copy telemetry pings", async() => {
+    // navigate to a regular page
+    driver.setContext(Context.CONTENT);
+    await driver.get("http://mozilla.org");
+    driver.setContext(Context.CHROME);
+
+    await utils.copyUrlBar(driver);
+    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+
+    let askToAddTelemetrySent = false;
+    let copyTelemetrySent = false;
+    for (const ping of pings) {
+      if (ping.payload.data.attributes.treatment === "ask-to-add") {
+        askToAddTelemetrySent = true;
+      }
+      if (ping.payload.data.attributes.event === "copy") {
+        copyTelemetrySent = true;
+      }
+      if (askToAddTelemetrySent && copyTelemetrySent) break;
+    }
+    assert(askToAddTelemetrySent && copyTelemetrySent);
+  });
+});
 
 //  it(`should only trigger MAX_TIMES_TO_SHOW = ${MAX_TIMES_TO_SHOW} times`, async() => {
 //    // NOTE: if this test fails, make sure MAX_TIMES_TO_SHOW has the correct value.
