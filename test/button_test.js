@@ -18,22 +18,14 @@ const MAX_TIMES_TO_SHOW = 5; // this must match MAX_TIMES_TO_SHOW in bootstrap.j
 // then we can test with a clean profile every time
 
 async function regularPageAnimationTest(driver) {
-  // navigate to a regular page
-  driver.setContext(Context.CONTENT);
-  await driver.get("http://mozilla.org");
-  driver.setContext(Context.CHROME);
-
+  await utils.gotoURL(driver, "http://mozilla.org");
   await utils.copyUrlBar(driver);
   const { hasClass, hasColor } = await utils.testAnimation(driver);
   assert(hasClass && hasColor);
 }
 
 async function regularPagePopupTest(driver) {
-  // navigate to a regular page
-  driver.setContext(Context.CONTENT);
-  await driver.get("http://github.com/mozilla");
-  driver.setContext(Context.CHROME);
-
+  await utils.gotoURL(driver, "http://mozilla.org");
   await utils.copyUrlBar(driver);
   const panelOpened = await utils.testPanel(driver, "share-button-panel");
   assert(panelOpened);
@@ -127,11 +119,7 @@ describe("Basic Functional Tests", function() {
   it(`should only trigger MAX_TIMES_TO_SHOW = ${MAX_TIMES_TO_SHOW} times`, async() => {
     // NOTE: if this test fails, make sure MAX_TIMES_TO_SHOW has the correct value.
 
-    // navigate to a regular page
-    driver.setContext(Context.CONTENT);
-    await driver.get("http://mozilla.org");
-    driver.setContext(Context.CHROME);
-
+    await utils.gotoURL(driver, "http://mozilla.org");
     for (let i = 0; i < MAX_TIMES_TO_SHOW; i++) {
       /* eslint-disable no-await-in-loop */
       await utils.copyUrlBar(driver);
@@ -212,10 +200,7 @@ describe("Highlight Treatment Tests", function() {
 
   it("animation should not trigger on disabled page", async() => {
     await utils.addShareButton(driver);
-    // navigate to a disabled page
-    driver.setContext(Context.CONTENT);
-    await driver.get("about:blank");
-    driver.setContext(Context.CHROME);
+    await utils.gotoURL(driver, "about:blank");
 
     await utils.copyUrlBar(driver);
     const { hasClass, hasColor } = await utils.testAnimation(driver);
@@ -223,10 +208,7 @@ describe("Highlight Treatment Tests", function() {
   });
 
   it("animation should not trigger if the share button is not added to toolbar", async() => {
-    // navigate to a regular page
-    driver.setContext(Context.CONTENT);
-    await driver.get("http://mozilla.org");
-    driver.setContext(Context.CHROME);
+    await utils.gotoURL(driver, "http://mozilla.org");
 
     await utils.copyUrlBar(driver);
     const { hasClass, hasColor } = await utils.testAnimation(driver);
@@ -239,10 +221,7 @@ describe("Highlight Treatment Tests", function() {
   });
 
   it("should send highlight and copy telemetry pings", async() => {
-    // navigate to a regular page
-    driver.setContext(Context.CONTENT);
-    await driver.get("http://mozilla.org");
-    driver.setContext(Context.CHROME);
+    await utils.gotoURL(driver, "http://mozilla.org");
 
     await utils.copyUrlBar(driver);
     const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
@@ -293,10 +272,7 @@ describe("DoorhangerDoNothing Treatment Tests", function() {
 
   it("popup should not trigger on disabled page", async() => {
     await utils.addShareButton(driver);
-    // navigate to a disabled page
-    driver.setContext(Context.CONTENT);
-    await driver.get("about:blank");
-    driver.setContext(Context.CHROME);
+    await utils.gotoURL(driver, "about:blank");
 
     await utils.copyUrlBar(driver);
     const panelOpened = await utils.testPanel(driver, "share-button-panel");
@@ -305,10 +281,7 @@ describe("DoorhangerDoNothing Treatment Tests", function() {
   });
 
   it("popup should not trigger if the share button is not added to toolbar", async() => {
-    // navigate to a regular page
-    driver.setContext(Context.CONTENT);
-    await driver.get("http://mozilla.org");
-    driver.setContext(Context.CHROME);
+    await utils.gotoURL(driver, "http://mozilla.org");
 
     await utils.copyUrlBar(driver);
     const panelOpened = await utils.testPanel(driver, "share-button-panel");
@@ -321,10 +294,7 @@ describe("DoorhangerDoNothing Treatment Tests", function() {
   });
 
   it("should send doorhanger and copy telemetry pings", async() => {
-    // navigate to a regular page
-    driver.setContext(Context.CONTENT);
-    await driver.get("http://mozilla.org");
-    driver.setContext(Context.CHROME);
+    await utils.gotoURL(driver, "http://mozilla.org");
 
     await utils.copyUrlBar(driver);
     const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
@@ -369,10 +339,7 @@ describe("DoorhangerAskToAdd Treatment Tests", function() {
   });
 
   it("should open an ask panel on a regular page without the share button", async() => {
-    // navigate to a regular page
-    driver.setContext(Context.CONTENT);
-    await driver.get("http://mozilla.org");
-    driver.setContext(Context.CHROME);
+    await utils.gotoURL(driver, "http://mozilla.org");
 
     await utils.copyUrlBar(driver);
     const panelOpened = await utils.testPanel(driver, "share-button-ask-panel");
@@ -387,10 +354,7 @@ describe("DoorhangerAskToAdd Treatment Tests", function() {
   it("should not open an ask panel on a regular page with the share button", async() => {
     await utils.addShareButton(driver);
 
-    // navigate to a regular page
-    driver.setContext(Context.CONTENT);
-    await driver.get("http://github.com/mozilla");
-    driver.setContext(Context.CHROME);
+    await utils.gotoURL(driver, "http://mozilla.org");
 
     await utils.copyUrlBar(driver);
     const askPanelOpened = await utils.testPanel(driver, "share-button-ask-panel");
@@ -409,10 +373,7 @@ describe("DoorhangerAskToAdd Treatment Tests", function() {
   });
 
   it("should not open an ask panel on a disabled page", async() => {
-    // navigate to a disabled page
-    driver.setContext(Context.CONTENT);
-    await driver.get("about:blank");
-    driver.setContext(Context.CHROME);
+    await utils.gotoURL(driver, "about:blank");
 
     await utils.copyUrlBar(driver);
     const panelOpened = await utils.testPanel(driver, "share-button-ask-panel");
@@ -420,10 +381,7 @@ describe("DoorhangerAskToAdd Treatment Tests", function() {
   });
 
   it("should add the button to the toolbar upon clicking on ask panel", async() => {
-    // navigate to a regular page
-    driver.setContext(Context.CONTENT);
-    await driver.get("http://mozilla.org");
-    driver.setContext(Context.CHROME);
+    await utils.gotoURL(driver, "http://mozilla.org");
 
     await utils.copyUrlBar(driver);
     const panelOpened = await utils.testPanel(driver, "share-button-ask-panel");
@@ -436,10 +394,7 @@ describe("DoorhangerAskToAdd Treatment Tests", function() {
   });
 
   it("should send ask-to-add and copy telemetry pings", async() => {
-    // navigate to a regular page
-    driver.setContext(Context.CONTENT);
-    await driver.get("http://mozilla.org");
-    driver.setContext(Context.CHROME);
+    await utils.gotoURL(driver, "http://mozilla.org");
 
     await utils.copyUrlBar(driver);
     const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
@@ -484,10 +439,7 @@ describe("DoorhangerAddToToolbar Treatment Tests", function() {
   });
 
   it("should add the button to the toolbar upon copy paste on regular page", async() => {
-    // navigate to a regular page
-    driver.setContext(Context.CONTENT);
-    await driver.get("http://mozilla.org");
-    driver.setContext(Context.CHROME);
+    await utils.gotoURL(driver, "http://mozilla.org");
 
     await utils.copyUrlBar(driver);
     assert(await utils.promiseAddonButton(driver));
@@ -498,10 +450,7 @@ describe("DoorhangerAddToToolbar Treatment Tests", function() {
   });
 
   it("should send add-to-toolbar and copy telemetry pings", async() => {
-    // navigate to a regular page
-    driver.setContext(Context.CONTENT);
-    await driver.get("http://mozilla.org");
-    driver.setContext(Context.CHROME);
+    await utils.gotoURL(driver, "http://mozilla.org");
 
     await utils.copyUrlBar(driver);
     const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");

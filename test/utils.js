@@ -237,3 +237,10 @@ module.exports.getMostRecentPingsByType = async(driver, type) =>
 
     callback(await Promise.all(pingData));
   }, type);
+
+module.exports.gotoURL = async(driver, url) => {
+  // navigate to a regular page
+  driver.setContext(Context.CONTENT);
+  await driver.get(url);
+  driver.setContext(Context.CHROME);
+};
