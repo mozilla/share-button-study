@@ -404,8 +404,8 @@ this.shutdown = function(data, reason) {
   // are we uninstalling?
   // if so, user or automatic?
   if (reason === REASONS.ADDON_UNINSTALL || reason === REASONS.ADDON_DISABLE) {
-    // reset the preference in case of uninstall or disable, primarily for testing purposes
-    Preferences.set(COUNTER_PREF, 0);
+    // reset the preference in case of uninstall or disable
+    Preferences.reset(COUNTER_PREF);
     if (!studyUtils._isEnding) {
       // we are the first requestors, must be user action.
       studyUtils.endStudy({ reason: "user-disable" });
