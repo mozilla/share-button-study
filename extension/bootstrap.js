@@ -406,16 +406,19 @@ this.startup = async function(data, reason) {
   Services.wm.addListener(windowListener);
 };
 
-this.shutdown = function(data, reason) {
+this.shutdown = async function(data, reason) {
   // remove event listener for new windows before processing WeakMap
   // to avoid race conditions (ie. new window added during shutdown)
   Services.wm.removeListener(windowListener);
 
+  // for use in summary ping
+  let hasShareButton = false;
   const windowEnumerator = Services.wm.getEnumerator("navigator:browser");
   while (windowEnumerator.hasMoreElements()) {
     const window = windowEnumerator.getNext();
     if (browserWindowWeakMap.has(window)) {
       const browserWindow = browserWindowWeakMap.get(window);
+      if (browserWindow.shareButton !== null) { hasShareButton = true; }
       browserWindow.shutdown();
     }
   }
@@ -425,8 +428,25 @@ this.shutdown = function(data, reason) {
   // are we uninstalling?
   // if so, user or automatic?
   if (reason === REASONS.ADDON_UNINSTALL || reason === REASONS.ADDON_DISABLE) {
-    // reset the preference in case of uninstall or disable
+    // reset the preference
+    // this will delete it since there is no value in the default branch
     Preferences.reset(COUNTER_PREF);
+
+    // send summary ping
+    const allPings = await PingStorage.getAllPings();
+    await PingStorage.clear();
+    await PingStorage.close();
+    // transform every value into string, such that we satisfy string -> string map from schema
+    // note: prefer .toString() over JSON.stringify() when possible to minimize strange formatting
+    const summaryPingData = {
+      hasShareButton: hasShareButton.toString(),
+      numberOfTimesURLBarCopied: allPings.filter(ping => ping.event === "copy").length.toString(),
+      numberOfShareButtonClicks: Services.telemetry.getHistogramById("SOCIAL_TOOLBAR_BUTTONS").snapshot().counts[0].toString(),
+      numberOfSharePanelClicks: Services.telemetry.getHistogramById("SOCIAL_PANEL_CLICKS").snapshot().counts[0].toString(),
+      summary: JSON.stringify(allPings),
+    };
+    studyUtils.telemetry(summaryPingData);
+
     if (!studyUtils._isEnding) {
       // we are the first requestors, must be user action.
       studyUtils.endStudy({ reason: "user-disable" });
