@@ -5,6 +5,7 @@ jobs:
       - image: marcrowo/share-button-study-base:4
         environment:
           DISPLAY: :10
+          FIREFOX_BINARY: /share-button-study/firefox/firefox
 
     working_directory: /share-button-study
 
