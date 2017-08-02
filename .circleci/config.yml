@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: marcrowo/share-button-study-base:6
+      - image: marcrowo/share-button-study-base:7
         environment:
           DISPLAY: :10
           FIREFOX_BINARY: /firefox/firefox
