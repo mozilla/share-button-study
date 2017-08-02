@@ -9,6 +9,6 @@ RUN apt-get update -y && \
     apt-get update -y && \
     apt-get install -y zip xvfb nodejs yarn xsel git ssh openbox bzip2 && \
     npm install -g get-firefox && \
-    get-firefox -b beta -t /firefox.tar.bz2 && tar -xvjf /firefox.tar.bz2
+    get-firefox -b beta -t /firefox.tar.bz2 && tar -xvjf /firefox.tar.bz2 -C /
 
 ENV PATH="/share-button-study/node_modules/.bin:$PATH"
