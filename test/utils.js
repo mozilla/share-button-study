@@ -169,11 +169,17 @@ module.exports.testAnimation = async(driver) => {
 };
 
 // FIXME waitForClassAdded is no longer being used?
-module.exports.waitForClassAdded = async driver =>
-  driver.wait(async() => {
-    const { hasClass } = await module.exports.testAnimation(driver);
-    return hasClass;
-  }, 2000);
+module.exports.waitForClassAdded = async(driver) => {
+  try {
+    return driver.wait(async() => {
+      const { hasClass } = await module.exports.testAnimation(driver);
+      return hasClass;
+    }, 2000);
+  } catch (e) {
+    if (e.name === "TimeoutError") { return null; }
+    throw (e);
+  }
+}
 
 module.exports.waitForAnimationEnd = async driver =>
   driver.wait(async() => {
