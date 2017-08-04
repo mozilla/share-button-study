@@ -179,7 +179,7 @@ module.exports.waitForClassAdded = async(driver) => {
     if (e.name === "TimeoutError") { return null; }
     throw (e);
   }
-}
+};
 
 module.exports.waitForAnimationEnd = async driver =>
   driver.wait(async() => {
