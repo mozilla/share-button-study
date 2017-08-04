@@ -185,6 +185,27 @@ class CopyController {
 
   async doCommand(cmd) {
     if (cmd === "cmd_copy") {
+      // Iterate over all other controllers and call doCommand on the first controller
+      // that supports it
+      // Skip until we reach the controller that we inserted
+      let i = 0;
+      const urlInput = this.browserWindow.urlInput;
+
+      for (; i < urlInput.controllers.getControllerCount(); i++) {
+        const curController = urlInput.controllers.getControllerAt(i);
+        if (curController.supportsCommand("share-button-study")) {
+          i += 1;
+          break;
+        }
+      }
+      for (; i < urlInput.controllers.getControllerCount(); i++) {
+        const curController = urlInput.controllers.getControllerAt(i);
+        if (curController.supportsCommand(cmd)) {
+          curController.doCommand(cmd);
+          break;
+        }
+      }
+
       const pingData = { event: "copy" };
       studyUtils.telemetry(pingData);
       // FIXME Cannot await within CopyController
@@ -196,26 +217,6 @@ class CopyController {
         Preferences.set(COUNTER_PREF, numberOfTimeShown + 1);
         // FIXME Cannot await within CopyController
         await TREATMENTS[this.treatment](this.browserWindow, shareButton);
-      }
-    }
-    // Iterate over all other controllers and call doCommand on the first controller
-    // that supports it
-    // Skip until we reach the controller that we inserted
-    let i = 0;
-    const urlInput = this.browserWindow.urlInput;
-
-    for (; i < urlInput.controllers.getControllerCount(); i++) {
-      const curController = urlInput.controllers.getControllerAt(i);
-      if (curController.supportsCommand("share-button-study")) {
-        i += 1;
-        break;
-      }
-    }
-    for (; i < urlInput.controllers.getControllerCount(); i++) {
-      const curController = urlInput.controllers.getControllerAt(i);
-      if (curController.supportsCommand(cmd)) {
-        curController.doCommand(cmd);
-        break;
       }
     }
   }
