@@ -168,7 +168,6 @@ module.exports.testAnimation = async(driver) => {
   return { hasClass, hasColor };
 };
 
-// FIXME waitForClassAdded is no longer being used?
 module.exports.waitForClassAdded = async(driver) => {
   try {
     return driver.wait(async() => {
