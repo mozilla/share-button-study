@@ -63,7 +63,7 @@ async function setTreatment(driver, treatment) {
   }, treatment);
 }
 
-describe.only("Basic Functional Tests", function() {
+describe("Basic Functional Tests", function() {
   // This gives Firefox time to start, and us a bit longer during some of the tests.
   this.timeout(15000);
 
@@ -95,7 +95,7 @@ describe.only("Basic Functional Tests", function() {
     assert.equal(text, "Share this page");
   });
 
-  it.only("should have copy paste working", async() => {
+  it("should have copy paste working", async() => {
     // FIXME testText will automatically be treated as a URL
     // which means that it will be formatted and the clipboard
     // value will be different unless we pass in a URL text at
@@ -109,9 +109,6 @@ describe.only("Basic Functional Tests", function() {
 
     await utils.copyUrlBar(driver);
     const clipboard = await clipboardy.read();
-    console.log(clipboard);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log(clipboard);
     assert(clipboard === testText);
   });
 
