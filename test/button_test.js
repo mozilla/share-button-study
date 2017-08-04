@@ -240,7 +240,7 @@ describe("Highlight Treatment Tests", function() {
 
 describe("DoorhangerDoNothing Treatment Tests", function() {
   // This gives Firefox time to start, and us a bit longer during some of the tests.
-  this.timeout(15000);
+  this.timeout(25000);
 
   let driver;
   let addonId;
@@ -313,7 +313,7 @@ describe("DoorhangerDoNothing Treatment Tests", function() {
 
 describe("DoorhangerAskToAdd Treatment Tests", function() {
   // This gives Firefox time to start, and us a bit longer during some of the tests.
-  this.timeout(15000);
+  this.timeout(25000);
 
   let driver;
   let addonId;
