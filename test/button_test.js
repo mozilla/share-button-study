@@ -110,6 +110,8 @@ describe.only("Basic Functional Tests", function() {
     await utils.copyUrlBar(driver);
     const clipboard = await clipboardy.read();
     console.log(clipboard);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log(clipboard);
     assert(clipboard === testText);
   });
 
