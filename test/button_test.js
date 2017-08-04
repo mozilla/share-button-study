@@ -18,6 +18,7 @@ const MAX_TIMES_TO_SHOW = 5; // this must match MAX_TIMES_TO_SHOW in bootstrap.j
 async function regularPageAnimationTest(driver) {
   await utils.gotoURL(driver, "http://mozilla.org");
   await utils.copyUrlBar(driver);
+  await utils.waitForClassAdded(driver);
   const { hasClass, hasColor } = await utils.testAnimation(driver);
   assert(hasClass && hasColor);
 }
