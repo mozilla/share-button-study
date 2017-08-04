@@ -245,3 +245,13 @@ module.exports.gotoURL = async(driver, url) => {
   await driver.get(url);
   driver.setContext(Context.CHROME);
 };
+
+module.exports.searchTelemetry = (conditionArray, telemetryArray) => {
+  const resultingPings = [];
+  for (const condition of conditionArray) {
+    const index = telemetryArray.findIndex(ping => condition(ping));
+    if (index === -1) { return []; }
+    resultingPings.push(telemetryArray[index]);
+  }
+  return resultingPings;
+};

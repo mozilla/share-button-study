@@ -181,7 +181,6 @@ describe("Highlight Treatment Tests", function() {
   });
 
   after(async() => {
-    await utils.uninstallAddon(driver, addonId);
     await driver.quit();
   });
 
@@ -236,6 +235,20 @@ describe("Highlight Treatment Tests", function() {
       if (highlightTelemetrySent && copyTelemetrySent) break;
     }
     assert(highlightTelemetrySent && copyTelemetrySent);
+  });
+
+  it("should send summary ping after uninstall", async() => {
+    await utils.gotoURL(driver, "http://mozilla.org");
+    await utils.copyUrlBar(driver);
+
+    await utils.uninstallAddon(driver, addonId);
+    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+
+    const foundPings = utils.searchTelemetry(
+      [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
+      pings);
+    assert(foundPings.length > 0);
+    assert(JSON.parse(foundPings[0].payload.data.attributes.summary).length > 0);
   });
 });
 
