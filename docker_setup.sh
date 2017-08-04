@@ -4,5 +4,5 @@ cd /share-button-study
 yarn install
 export FIREFOX_BINARY=/firefox/firefox
 export DISPLAY=:10
-Xvfb -ac $DISPLAY
-openbox
+Xvfb -ac $DISPLAY &
+openbox &
