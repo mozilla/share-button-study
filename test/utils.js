@@ -170,10 +170,11 @@ module.exports.testAnimation = async(driver) => {
 
 module.exports.waitForClassAdded = async(driver) => {
   try {
-    return driver.wait(async() => {
+    const animationTest = await driver.wait(async() => {
       const { hasClass } = await module.exports.testAnimation(driver);
       return hasClass;
     }, 2000);
+    return animationTest;
   } catch (e) {
     if (e.name === "TimeoutError") { return null; }
     throw (e);
@@ -246,11 +247,20 @@ module.exports.gotoURL = async(driver, url) => {
   driver.setContext(Context.CHROME);
 };
 
+class SearchError extends Error {
+  constructor(condition) {
+    const message = `Could not find ping satisfying condition: ${condition.toString()}`;
+    super(message);
+    this.message = message;
+    this.name = "SearchError";
+  }
+}
+
 module.exports.searchTelemetry = (conditionArray, telemetryArray) => {
   const resultingPings = [];
   for (const condition of conditionArray) {
     const index = telemetryArray.findIndex(ping => condition(ping));
-    if (index === -1) { return []; }
+    if (index === -1) { throw new SearchError(condition); }
     resultingPings.push(telemetryArray[index]);
   }
   return resultingPings;

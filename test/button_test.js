@@ -11,31 +11,39 @@ const webdriver = require("selenium-webdriver");
 const By = webdriver.By;
 const until = webdriver.until;
 const MAX_TIMES_TO_SHOW = 5; // this must match MAX_TIMES_TO_SHOW in bootstrap.js
+const MOZILLA_ORG = "http://mozilla.org";
 
 // TODO create new profile per test?
 // then we can test with a clean profile every time
 
-async function regularPageAnimationTest(driver) {
-  await utils.gotoURL(driver, "http://mozilla.org");
+async function animationTest(driver, url) {
+  await utils.addShareButton(driver);
+  await utils.gotoURL(driver, url);
   await utils.copyUrlBar(driver);
   await utils.waitForClassAdded(driver);
   const { hasClass, hasColor } = await utils.testAnimation(driver);
-  assert(hasClass && hasColor);
+  return hasClass && hasColor;
 }
 
-async function regularPagePopupTest(driver) {
-  await utils.gotoURL(driver, "http://mozilla.org");
+async function popupTest(driver, url) {
+  await utils.gotoURL(driver, url);
   await utils.copyUrlBar(driver);
   const panelOpened = await utils.testPanel(driver, "share-button-panel");
-  assert(panelOpened);
+  return panelOpened;
 }
 
-async function overflowMenuTest(driver) {
+async function overflowMenuTest(driver, test, url) {
   const window = driver.manage().window();
   const currentSize = await window.getSize();
   await window.setSize(640, 480);
+
+  const overflowButton = driver.wait(until.elementLocated(
+    By.id("nav-bar-overflow-button")), 1000);
+  await overflowButton.click();
+
   await utils.copyUrlBar(driver);
-  assert(!(await utils.testPanel(driver, "share-button-panel")));
+
+  assert(!(await test(driver, url)));
   await window.setSize(currentSize.width, currentSize.height);
 }
 
@@ -116,7 +124,7 @@ describe("Basic Functional Tests", function() {
   it(`should only trigger MAX_TIMES_TO_SHOW = ${MAX_TIMES_TO_SHOW} times`, async() => {
     // NOTE: if this test fails, make sure MAX_TIMES_TO_SHOW has the correct value.
 
-    await utils.gotoURL(driver, "http://mozilla.org");
+    await utils.gotoURL(driver, MOZILLA_ORG);
     for (let i = 0; i < MAX_TIMES_TO_SHOW; i++) {
       /* eslint-disable no-await-in-loop */
       await utils.copyUrlBar(driver);
@@ -143,8 +151,7 @@ describe("Basic Functional Tests", function() {
 
     it("should no longer trigger animation once uninstalled", async() => {
       await utils.copyUrlBar(driver);
-      const { hasClass, hasColor } = await utils.testAnimation(driver);
-      assert(!hasClass && !hasColor);
+      assert(!(await animationTest(driver, MOZILLA_ORG)));
     });
 
     it("should no longer trigger popup once uninstalled", async() => {
@@ -191,59 +198,48 @@ describe("Highlight Treatment Tests", function() {
 
   it("animation should trigger on regular page", async() => {
     await utils.addShareButton(driver);
-    await regularPageAnimationTest(driver);
+    assert(await animationTest(driver, MOZILLA_ORG));
   });
 
   it("animation should not trigger on disabled page", async() => {
     await utils.addShareButton(driver);
-    await utils.gotoURL(driver, "about:blank");
-
-    await utils.copyUrlBar(driver);
-    const { hasClass, hasColor } = await utils.testAnimation(driver);
-    assert(!hasClass && !hasColor);
+    assert(!(await animationTest(driver, "about:blank")));
   });
 
   it("animation should not trigger if the share button is not added to toolbar", async() => {
-    await utils.gotoURL(driver, "http://mozilla.org");
+    await utils.gotoURL(driver, MOZILLA_ORG);
 
     await utils.copyUrlBar(driver);
     const { hasClass, hasColor } = await utils.testAnimation(driver);
     assert(!hasClass && !hasColor);
   });
 
-  it("should not trigger treatments if the share button is in the overflow menu", async() => {
+  it("should not trigger animation if the share button is in the overflow menu", async() => {
     await utils.addShareButton(driver);
-    await overflowMenuTest(driver);
+    await overflowMenuTest(driver, animationTest, MOZILLA_ORG);
   });
 
   it("should send highlight and copy telemetry pings", async() => {
     await utils.addShareButton(driver);
-    await utils.gotoURL(driver, "http://mozilla.org");
-
+    await utils.gotoURL(driver, MOZILLA_ORG);
     await utils.copyUrlBar(driver);
-    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+    await utils.waitForClassAdded(driver);
 
-    let highlightTelemetrySent = false;
-    let copyTelemetrySent = false;
-    for (const ping of pings) {
-      if (ping.payload.data.attributes.treatment === "highlight") {
-        highlightTelemetrySent = true;
-      }
-      if (ping.payload.data.attributes.event === "copy") {
-        copyTelemetrySent = true;
-      }
-      if (highlightTelemetrySent && copyTelemetrySent) break;
-    }
-    assert(highlightTelemetrySent && copyTelemetrySent);
+    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+    const foundPings = utils.searchTelemetry([
+      ping => ping.payload.data.attributes.treatment === "highlight",
+      ping => ping.payload.data.attributes.event === "copy",
+    ], pings);
+    assert(foundPings.length > 0);
   });
 
   it("should send summary ping after uninstall", async() => {
-    await utils.gotoURL(driver, "http://mozilla.org");
+    await utils.gotoURL(driver, MOZILLA_ORG);
     await utils.copyUrlBar(driver);
 
     await utils.uninstallAddon(driver, addonId);
-    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
 
+    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
     const foundPings = utils.searchTelemetry(
       [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
       pings);
@@ -278,7 +274,7 @@ describe("DoorhangerDoNothing Treatment Tests", function() {
 
   it("popup should trigger on regular page", async() => {
     await utils.addShareButton(driver);
-    await regularPagePopupTest(driver);
+    assert(await popupTest(driver, MOZILLA_ORG));
   });
 
   it("popup should not trigger on disabled page", async() => {
@@ -292,36 +288,30 @@ describe("DoorhangerDoNothing Treatment Tests", function() {
   });
 
   it("popup should not trigger if the share button is not added to toolbar", async() => {
-    await utils.gotoURL(driver, "http://mozilla.org");
+    await utils.gotoURL(driver, MOZILLA_ORG);
 
     await utils.copyUrlBar(driver);
     const panelOpened = await utils.testPanel(driver, "share-button-panel");
     assert(!panelOpened);
   });
 
-  it("should not trigger treatments if the share button is in the overflow menu", async() => {
+  it("should not trigger doorhanger if the share button is in the overflow menu", async() => {
     await utils.addShareButton(driver);
-    await overflowMenuTest(driver);
+    await overflowMenuTest(driver, popupTest, MOZILLA_ORG);
   });
 
   it("should send doorhanger and copy telemetry pings", async() => {
-    await utils.gotoURL(driver, "http://mozilla.org");
-
+    await utils.addShareButton(driver);
+    await utils.gotoURL(driver, MOZILLA_ORG);
     await utils.copyUrlBar(driver);
-    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+    await utils.testPanel(driver, "share-button-panel");
 
-    let doorhangerTelemetrySent = false;
-    let copyTelemetrySent = false;
-    for (const ping of pings) {
-      if (ping.payload.data.attributes.treatment === "doorhanger") {
-        doorhangerTelemetrySent = true;
-      }
-      if (ping.payload.data.attributes.event === "copy") {
-        copyTelemetrySent = true;
-      }
-      if (doorhangerTelemetrySent && copyTelemetrySent) break;
-    }
-    assert(doorhangerTelemetrySent && copyTelemetrySent);
+    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+    const foundPings = utils.searchTelemetry([
+      ping => ping.payload.data.attributes.treatment === "doorhanger",
+      ping => ping.payload.data.attributes.event === "copy",
+    ], pings);
+    assert(foundPings.length > 0);
   });
 });
 
@@ -350,7 +340,7 @@ describe("DoorhangerAskToAdd Treatment Tests", function() {
   });
 
   it("should open an ask panel on a regular page without the share button", async() => {
-    await utils.gotoURL(driver, "http://mozilla.org");
+    await utils.gotoURL(driver, MOZILLA_ORG);
 
     await utils.copyUrlBar(driver);
     const panelOpened = await utils.testPanel(driver, "share-button-ask-panel");
@@ -359,13 +349,13 @@ describe("DoorhangerAskToAdd Treatment Tests", function() {
 
   it("should open a standard panel on a regular page with the share button", async() => {
     await utils.addShareButton(driver);
-    await regularPagePopupTest(driver);
+    assert(await popupTest(driver, MOZILLA_ORG));
   });
 
   it("should not open an ask panel on a regular page with the share button", async() => {
     await utils.addShareButton(driver);
 
-    await utils.gotoURL(driver, "http://mozilla.org");
+    await utils.gotoURL(driver, MOZILLA_ORG);
 
     await utils.copyUrlBar(driver);
     const askPanelOpened = await utils.testPanel(driver, "share-button-ask-panel");
@@ -392,7 +382,7 @@ describe("DoorhangerAskToAdd Treatment Tests", function() {
   });
 
   it("should add the button to the toolbar upon clicking on ask panel", async() => {
-    await utils.gotoURL(driver, "http://mozilla.org");
+    await utils.gotoURL(driver, MOZILLA_ORG);
 
     await utils.copyUrlBar(driver);
     const panelOpened = await utils.testPanel(driver, "share-button-ask-panel");
@@ -405,23 +395,17 @@ describe("DoorhangerAskToAdd Treatment Tests", function() {
   });
 
   it("should send ask-to-add and copy telemetry pings", async() => {
-    await utils.gotoURL(driver, "http://mozilla.org");
-
+    await utils.addShareButton(driver);
+    await utils.gotoURL(driver, MOZILLA_ORG);
     await utils.copyUrlBar(driver);
-    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+    await utils.testPanel(driver, "share-button-ask-panel");
 
-    let askToAddTelemetrySent = false;
-    let copyTelemetrySent = false;
-    for (const ping of pings) {
-      if (ping.payload.data.attributes.treatment === "ask-to-add") {
-        askToAddTelemetrySent = true;
-      }
-      if (ping.payload.data.attributes.event === "copy") {
-        copyTelemetrySent = true;
-      }
-      if (askToAddTelemetrySent && copyTelemetrySent) break;
-    }
-    assert(askToAddTelemetrySent && copyTelemetrySent);
+    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+    const foundPings = utils.searchTelemetry([
+      ping => ping.payload.data.attributes.treatment === "ask-to-add",
+      ping => ping.payload.data.attributes.event === "copy",
+    ], pings);
+    assert(foundPings.length > 0);
   });
 });
 
@@ -450,34 +434,26 @@ describe("DoorhangerAddToToolbar Treatment Tests", function() {
   });
 
   it("should add the button to the toolbar upon copy paste on regular page", async() => {
-    await utils.gotoURL(driver, "http://mozilla.org");
+    await utils.gotoURL(driver, MOZILLA_ORG);
 
     await utils.copyUrlBar(driver);
     assert(await utils.promiseAddonButton(driver));
   });
 
   it("popup should trigger on regular page", async() => {
-    await regularPagePopupTest(driver);
+    assert(await popupTest(driver, MOZILLA_ORG));
   });
 
   it("should send add-to-toolbar and copy telemetry pings", async() => {
-    await utils.gotoURL(driver, "http://mozilla.org");
-
+    await utils.gotoURL(driver, MOZILLA_ORG);
     await utils.copyUrlBar(driver);
-    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
 
-    let addToToolbarSent = false;
-    let copyTelemetrySent = false;
-    for (const ping of pings) {
-      if (ping.payload.data.attributes.treatment === "add-to-toolbar") {
-        addToToolbarSent = true;
-      }
-      if (ping.payload.data.attributes.event === "copy") {
-        copyTelemetrySent = true;
-      }
-      if (addToToolbarSent && copyTelemetrySent) break;
-    }
-    assert(addToToolbarSent && copyTelemetrySent);
+    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+    const foundPings = utils.searchTelemetry([
+      ping => ping.payload.data.attributes.treatment === "add-to-toolbar",
+      ping => ping.payload.data.attributes.event === "copy",
+    ], pings);
+    assert(foundPings.length > 0);
   });
 });
 
@@ -506,5 +482,6 @@ describe("New Window Add-on Functional Tests", function() {
 
   afterEach(async() => postTestReset(driver));
 
-  it("animation should trigger on regular page", async() => regularPageAnimationTest(driver));
+  it("animation should trigger on regular page", async() =>
+    assert(await animationTest(driver, MOZILLA_ORG)));
 });
