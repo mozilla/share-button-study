@@ -225,9 +225,13 @@ module.exports.testPanel = async(driver, panelId) => {
   }
 };
 
-module.exports.closePanel = async(driver) => {
-  const urlbar = await module.exports.promiseUrlBar(driver);
-  await urlbar.sendKeys(webdriver.Key.ESCAPE);
+module.exports.closePanel = async(driver, target = null) => {
+  if (target !== null) {
+    target.sendKeys(webdriver.Key.ESCAPE);
+  } else {
+    const urlbar = await module.exports.promiseUrlBar(driver);
+    await urlbar.sendKeys(webdriver.Key.ESCAPE);
+  }
 };
 
 // Returns array of pings of type `type` in sorted order by timestamp

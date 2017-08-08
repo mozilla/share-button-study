@@ -357,7 +357,7 @@ describe("Summary Ping Tests", function() {
     const shareButton = await utils.promiseAddonButton(driver);
     await shareButton.click();
     await utils.testPanel(driver, "social-share-panel");
-    await utils.closePanel(driver);
+    await utils.closePanel(driver, shareButton);
     await shareButton.click();
     await utils.uninstallAddon(driver, addonId);
     // hacky workaround to wait until the summary ping is sent
@@ -383,7 +383,7 @@ describe("Summary Ping Tests", function() {
     await sharePanel.click();
     await sharePanel.click();
     await sharePanel.click();
-    await utils.closePanel(driver);
+    await utils.closePanel(driver, sharePanel);
 
     await utils.uninstallAddon(driver, addonId);
     // hacky workaround to wait until the summary ping is sent
