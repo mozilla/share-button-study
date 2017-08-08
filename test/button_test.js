@@ -284,21 +284,6 @@ describe("Highlight Treatment Tests", function() {
     ], pings);
     assert(foundPings.length > 0);
   });
-
-  // TODO Move this test into Summary Ping Tests
-  it("should send summary ping after uninstall", async() => {
-    await utils.gotoURL(driver, MOZILLA_ORG);
-    await utils.copyUrlBar(driver);
-
-    await utils.uninstallAddon(driver, addonId);
-
-    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
-    const foundPings = utils.searchTelemetry(
-      [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
-      pings);
-    assert(foundPings.length > 0);
-    assert(JSON.parse(foundPings[0].payload.data.attributes.summary).length > 0);
-  });
 });
 
 describe("Summary Ping Tests", function() {
