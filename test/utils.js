@@ -181,11 +181,17 @@ module.exports.waitForClassAdded = async(driver) => {
   }
 };
 
-module.exports.waitForAnimationEnd = async driver =>
-  driver.wait(async() => {
-    const { hasClass, hasColor } = await module.exports.testAnimation(driver);
-    return !hasClass && !hasColor;
-  }, 2000);
+module.exports.waitForAnimationEnd = async(driver) => {
+  try {
+    return await driver.wait(async() => {
+      const { hasClass, hasColor } = await module.exports.testAnimation(driver);
+      return !hasClass && !hasColor;
+    }, 2000);
+  } catch (e) {
+    if (e.name === "TimeoutError") { return null; }
+    throw (e);
+  }
+}
 
 module.exports.takeScreenshot = async(driver) => {
   try {
