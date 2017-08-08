@@ -313,6 +313,8 @@ describe("Summary Ping Tests", function() {
 
   it("should set hasShareButton to false if the share button is not added", async() => {
     await utils.uninstallAddon(driver, addonId);
+    // hacky workaround to wait until the summary ping is sent
+    await new Promise(resolve => setTimeout(resolve, 500));
     const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
     const foundPings = utils.searchTelemetry(
       [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
