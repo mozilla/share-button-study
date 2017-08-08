@@ -47,6 +47,67 @@ async function overflowMenuTest(driver, test, url) {
   await window.setSize(currentSize.width, currentSize.height);
 }
 
+async function setTreatment(driver, treatment) {
+  return driver.executeAsyncScript((...args) => {
+    const callback = args[args.length - 1];
+    Components.utils.import("resource://gre/modules/Preferences.jsm");
+    // using the rest parameters, treatment = args[0]
+    Preferences.set("extensions.sharebuttonstudy.treatment", args[0]);
+    callback();
+  }, treatment);
+}
+
+async function summaryFieldTest(driver, addonId, treatment) {
+  await utils.uninstallAddon(driver, addonId);
+  // hack workaround to wait for uninstall to really happen?
+  await new Promise(resolve => setTimeout(resolve, 500));
+  await setTreatment(driver, treatment);
+  // install the addon
+  await utils.installAddon(driver);
+
+  if (["highlight", "doorhangerDoNothing"].includes(treatment)) {
+    await utils.addShareButton(driver);
+  }
+
+  await utils.gotoURL(driver, MOZILLA_ORG);
+  await utils.copyUrlBar(driver);
+  await utils.waitForAnimationEnd(driver);
+
+  await utils.uninstallAddon(driver, addonId);
+  // hacky workaround to wait until the summary ping is sent
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+  const foundPings = utils.searchTelemetry(
+    [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
+    pings);
+  assert(foundPings.length > 0);
+
+  const summaryPings = JSON.parse(foundPings[0].payload.data.attributes.summary);
+  // Event pings do not use the treatment name to avoid confusion between 
+  // showing the doorhanger vs. showing ask-to-add panel etc. (ie. if the share button
+  // is already in the toolbar)
+  const treatmentToEventName = {
+    highlight: "highlight",
+    doorhangerDoNothing: "doorhanger",
+    doorhangerAskToAdd: "ask-to-add",
+    doorhangerAddToToolbar: "add-to-toolbar",
+  };
+  const events = [{ event: "copy" }, { treatment: treatmentToEventName[treatment] }];
+  // add to toolbar will additionally trigger the doorhanger treatment, since it will
+  // add the button to the toolbar every time
+  if (treatment === "doorhangerAddToToolbar") {
+    events.push({ treatment: "doorhanger" });
+  }
+
+  assert(summaryPings.length === events.length);
+  for (let i = 0; i < events.length; i++) {
+    delete summaryPings[i].timestamp;
+    delete summaryPings[i].id;
+    assert(events[i][Object.keys(events[i])[0]]
+      === summaryPings[i][Object.keys(summaryPings[i])[0]]);
+  }
+}
+
 async function postTestReset(driver) {
   // wait for the animation to end before running subsequent tests
   await utils.waitForAnimationEnd(driver);
@@ -61,15 +122,6 @@ async function postTestReset(driver) {
     }
     callback();
   });
-}
-
-async function setTreatment(driver, treatment) {
-  return driver.executeAsyncScript((treatmentArg, callback) => {
-    Components.utils.import("resource://gre/modules/Preferences.jsm");
-    // using the rest parameters, treatment = args[0]
-    Preferences.set("extensions.sharebuttonstudy.treatment", treatmentArg);
-    callback();
-  }, treatment);
 }
 
 describe("Basic Functional Tests", function() {
@@ -233,6 +285,7 @@ describe("Highlight Treatment Tests", function() {
     assert(foundPings.length > 0);
   });
 
+  // TODO Move this test into Summary Ping Tests
   it("should send summary ping after uninstall", async() => {
     await utils.gotoURL(driver, MOZILLA_ORG);
     await utils.copyUrlBar(driver);
@@ -245,6 +298,132 @@ describe("Highlight Treatment Tests", function() {
       pings);
     assert(foundPings.length > 0);
     assert(JSON.parse(foundPings[0].payload.data.attributes.summary).length > 0);
+  });
+});
+
+describe("Summary Ping Tests", function() {
+  // This gives Firefox time to start, and us a bit longer during some of the tests.
+  this.timeout(25000);
+
+  let driver;
+  let addonId;
+
+  before(async() => {
+    driver = await utils.promiseSetupDriver();
+  });
+
+  beforeEach(async() => {
+    await setTreatment(driver, "highlight");
+    // install the addon
+    addonId = await utils.installAddon(driver);
+  });
+
+  after(async() => {
+    await driver.quit();
+  });
+
+  afterEach(async() => {
+    await postTestReset(driver);
+    await utils.removeShareButton(driver);
+  });
+
+  it("should set hasShareButton to false if the share button is not added", async() => {
+    await utils.uninstallAddon(driver, addonId);
+    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+    const foundPings = utils.searchTelemetry(
+      [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
+      pings);
+    assert(foundPings.length > 0);
+    assert(!JSON.parse(foundPings[0].payload.data.attributes.hasShareButton));
+  });
+
+  it("should set hasShareButton to true if the share button is added", async() => {
+    await utils.addShareButton(driver);
+    await utils.uninstallAddon(driver, addonId);
+    // hacky workaround to wait until the summary ping is sent
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+    const foundPings = utils.searchTelemetry(
+      [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
+      pings);
+    assert(foundPings.length > 0);
+    assert(JSON.parse(foundPings[0].payload.data.attributes.hasShareButton));
+  });
+
+  it("should report the correct number of URL copy events", async() => {
+    await utils.copyUrlBar(driver);
+    await utils.copyUrlBar(driver);
+    await utils.copyUrlBar(driver);
+    await utils.uninstallAddon(driver, addonId);
+    // hacky workaround to wait until the summary ping is sent
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+    const foundPings = utils.searchTelemetry(
+      [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
+      pings);
+    assert(foundPings.length > 0);
+    assert(JSON.parse(foundPings[0].payload.data.attributes.numberOfTimesURLBarCopied) === 3);
+  });
+
+  it("should report the correct number of share button clicks", async() => {
+    await utils.addShareButton(driver);
+    await utils.gotoURL(driver, MOZILLA_ORG);
+    const shareButton = await utils.promiseAddonButton(driver);
+    await shareButton.click();
+    await utils.testPanel(driver, "social-share-panel");
+    await utils.closePanel(driver);
+    await shareButton.click();
+    await utils.uninstallAddon(driver, addonId);
+    // hacky workaround to wait until the summary ping is sent
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+    const foundPings = utils.searchTelemetry(
+      [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
+      pings);
+    assert(foundPings.length > 0);
+    assert(JSON.parse(foundPings[0].payload.data.attributes.numberOfShareButtonClicks) === 2);
+  });
+
+  it("should report the correct number of share panel clicks", async() => {
+    await utils.addShareButton(driver);
+    await utils.gotoURL(driver, MOZILLA_ORG);
+    const shareButton = await utils.promiseAddonButton(driver);
+    await shareButton.click();
+
+    const sharePanel = await driver.wait(until.elementLocated(
+      By.className("social-share-frame")), 3000);
+    await utils.testPanel(driver, "social-share-panel");
+    await sharePanel.click();
+    await sharePanel.click();
+    await sharePanel.click();
+    await sharePanel.click();
+    await utils.closePanel(driver);
+
+    await utils.uninstallAddon(driver, addonId);
+    // hacky workaround to wait until the summary ping is sent
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
+    const foundPings = utils.searchTelemetry(
+      [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
+      pings);
+    assert(foundPings.length > 0);
+    assert(JSON.parse(foundPings[0].payload.data.attributes.numberOfSharePanelClicks) === 4);
+  });
+
+  it("should log a summary ping for highlight treatment", async() => {
+    await summaryFieldTest(driver, addonId, "highlight");
+  });
+
+  it("should log a summary ping for doorhangerDoNothing treatment", async() => {
+    await summaryFieldTest(driver, addonId, "doorhangerDoNothing");
+  });
+
+  it("should log a summary ping for doorhangerAskToAdd treatment", async() => {
+    await summaryFieldTest(driver, addonId, "doorhangerAskToAdd");
+  });
+
+  it("should log a summary ping for doorhangerAddToToolbar treatment", async() => {
+    await summaryFieldTest(driver, addonId, "doorhangerAddToToolbar");
   });
 });
 

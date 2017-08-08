@@ -44,7 +44,7 @@ function shareButtonIsUseable(shareButton) {
 async function highlightTreatment(browserWindow, shareButton) {
   if (shareButtonIsUseable(shareButton)) {
     const pingData = { treatment: "highlight" };
-    studyUtils.telemetry(pingData);
+    await studyUtils.telemetry(pingData);
     await PingStorage.logPing(pingData);
     // add the event listener to remove the css class when the animation ends
     shareButton.addEventListener("animationend", browserWindow.animationEndListener);
@@ -55,7 +55,7 @@ async function highlightTreatment(browserWindow, shareButton) {
 async function doorhangerDoNothingTreatment(browserWindow, shareButton) {
   if (shareButtonIsUseable(shareButton)) {
     const pingData = { treatment: "doorhanger" };
-    studyUtils.telemetry(pingData);
+    await studyUtils.telemetry(pingData);
     await PingStorage.logPing(pingData);
     let panel = browserWindow.window.document.getElementById("share-button-panel");
     if (panel === null) { // create the panel
@@ -113,7 +113,7 @@ async function doorhangerAskToAddTreatment(browserWindow, shareButton) {
     if (burgerMenu !== null) {
       // only send the telemetry ping if we actually open the panel
       const pingData = { treatment: "ask-to-add" };
-      studyUtils.telemetry(pingData);
+      await studyUtils.telemetry(pingData);
       await PingStorage.logPing(pingData);
       panel.openPopup(burgerMenu, "bottomcenter topright", 0, 0, false, false);
     }
@@ -128,7 +128,7 @@ async function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
   // check to see if the page will be shareable after adding the button to the toolbar
   if (currentPageIsShareable(browserWindow) && !shareButtonIsUseable(shareButton)) {
     const pingData = { treatment: "add-to-toolbar" };
-    studyUtils.telemetry(pingData);
+    await studyUtils.telemetry(pingData);
     await PingStorage.logPing(pingData);
     CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
     // need to get using browserWindow.shareButton because the shareButton argument
@@ -207,7 +207,7 @@ class CopyController {
       }
 
       const pingData = { event: "copy" };
-      studyUtils.telemetry(pingData);
+      await studyUtils.telemetry(pingData);
       // FIXME Cannot await within CopyController
       await PingStorage.logPing(pingData);
       const shareButton = this.browserWindow.shareButton;
@@ -446,7 +446,7 @@ this.shutdown = async function(data, reason) {
       numberOfSharePanelClicks: Services.telemetry.getHistogramById("SOCIAL_PANEL_CLICKS").snapshot().counts[0].toString(),
       summary: JSON.stringify(allPings),
     };
-    studyUtils.telemetry(summaryPingData);
+    await studyUtils.telemetry(summaryPingData);
 
     if (!studyUtils._isEnding) {
       // we are the first requestors, must be user action.

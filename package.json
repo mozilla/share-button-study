@@ -17,7 +17,7 @@
     "selenium-webdriver": "^3.4.0"
   },
   "devDependencies": {
-    "eslint": "^4.0.0",
+    "eslint": "^4.4.1",
     "eslint-config-airbnb-base": "^11.2.0",
     "eslint-plugin-import": "^2.5.0"
   },
