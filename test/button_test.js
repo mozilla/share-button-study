@@ -60,7 +60,7 @@ async function setTreatment(driver, treatment) {
 async function summaryFieldTest(driver, addonId, treatment) {
   await utils.uninstallAddon(driver, addonId);
   // hack workaround to wait for uninstall to really happen?
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise(resolve => setTimeout(resolve, 1000));
   await setTreatment(driver, treatment);
   // install the addon
   await utils.installAddon(driver);
@@ -75,7 +75,7 @@ async function summaryFieldTest(driver, addonId, treatment) {
 
   await utils.uninstallAddon(driver, addonId);
   // hacky workaround to wait until the summary ping is sent
-  await new Promise(resolve => setTimeout(resolve, 500));
+  await new Promise(resolve => setTimeout(resolve, 1000));
   const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
   const foundPings = utils.searchTelemetry(
     [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
@@ -356,7 +356,7 @@ describe("Summary Ping Tests", function() {
     await utils.copyUrlBar(driver);
     await utils.uninstallAddon(driver, addonId);
     // hacky workaround to wait until the summary ping is sent
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
     const foundPings = utils.searchTelemetry(
       [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
@@ -401,7 +401,7 @@ describe("Summary Ping Tests", function() {
 
     await utils.uninstallAddon(driver, addonId);
     // hacky workaround to wait until the summary ping is sent
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
     const foundPings = utils.searchTelemetry(
       [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
