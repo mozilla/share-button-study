@@ -83,7 +83,7 @@ async function summaryFieldTest(driver, addonId, treatment) {
   assert(foundPings.length > 0);
 
   const summaryPings = JSON.parse(foundPings[0].payload.data.attributes.summary);
-  // Event pings do not use the treatment name to avoid confusion between 
+  // Event pings do not use the treatment name to avoid confusion between
   // showing the doorhanger vs. showing ask-to-add panel etc. (ie. if the share button
   // is already in the toolbar)
   const treatmentToEventName = {
@@ -361,7 +361,7 @@ describe("Summary Ping Tests", function() {
     await shareButton.click();
     await utils.uninstallAddon(driver, addonId);
     // hacky workaround to wait until the summary ping is sent
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
     const foundPings = utils.searchTelemetry(
       [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
