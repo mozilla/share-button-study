@@ -191,7 +191,7 @@ module.exports.waitForAnimationEnd = async(driver) => {
     if (e.name === "TimeoutError") { return null; }
     throw (e);
   }
-}
+};
 
 module.exports.takeScreenshot = async(driver) => {
   try {
