@@ -1,4 +1,4 @@
-const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
+const { interfaces: Ci, utils: Cu } = Components;
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/Console.jsm");
 Cu.import("resource://gre/modules/AppConstants.jsm");
@@ -93,7 +93,7 @@ async function doorhangerAskToAddTreatment(browserWindow, shareButton) {
       panel.setAttribute("noautofocus", true);
       panel.setAttribute("level", "parent");
 
-      panel.addEventListener("click", (e) => {
+      panel.addEventListener("click", () => {
         CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
         panel.hidePopup();
         highlightTreatment(browserWindow, browserWindow.shareButton);
@@ -181,7 +181,7 @@ class CopyController {
 
   supportsCommand(cmd) { return cmd === "cmd_copy" || cmd === "share-button-study"; }
 
-  isCommandEnabled(cmd) { return true; }
+  isCommandEnabled() { return true; }
 
   async doCommand(cmd) {
     if (cmd === "cmd_copy") {
@@ -221,7 +221,7 @@ class CopyController {
     }
   }
 
-  onEvent(e) {}
+  onEvent() {}
 }
 
 class BrowserWindow {
@@ -261,7 +261,7 @@ class BrowserWindow {
     this.urlInput.controllers.removeController(this.copyController);
   }
 
-  animationEndListener(e) {
+  animationEndListener() {
     // When the animation is done, we want to remove the CSS class
     // so that we can add the class again upon the next copy and
     // replay the animation
@@ -343,7 +343,7 @@ class BrowserWindow {
 
 // see https://dxr.mozilla.org/mozilla-central/rev/53477d584130945864c4491632f88da437353356/xpfe/appshell/nsIWindowMediatorListener.idl
 const windowListener = {
-  onWindowTitleChange(window, title) { },
+  onWindowTitleChange() { },
   onOpenWindow(xulWindow) {
     // xulWindow is of type nsIXULWindow, we want an nsIDOMWindow
     // see https://dxr.mozilla.org/mozilla-central/rev/53477d584130945864c4491632f88da437353356/browser/base/content/test/general/browser_fullscreen-window-open.js#316
@@ -353,7 +353,7 @@ const windowListener = {
 
     // we need to use a listener function so that it's injected
     // once the window is loaded / ready
-    const onWindowOpen = (e) => {
+    const onWindowOpen = () => {
       domWindow.removeEventListener("load", onWindowOpen);
       const browserWindow = new BrowserWindow(domWindow);
       browserWindow.startup();
@@ -361,10 +361,10 @@ const windowListener = {
 
     domWindow.addEventListener("load", onWindowOpen, true);
   },
-  onCloseWindow(window) { },
+  onCloseWindow() { },
 };
 
-this.install = function(data, reason) {};
+this.install = function() {};
 
 this.startup = async function(data, reason) {
   studyUtils.setup({
@@ -455,4 +455,4 @@ this.shutdown = async function(data, reason) {
   }
 };
 
-this.uninstall = function(data, reason) {};
+this.uninstall = function() {};
