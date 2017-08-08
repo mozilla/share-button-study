@@ -230,13 +230,12 @@ describe("Highlight Treatment Tests", function() {
   this.timeout(25000);
 
   let driver;
-  let addonId;
 
   before(async() => {
     driver = await utils.promiseSetupDriver();
     await setTreatment(driver, "highlight");
     // install the addon
-    addonId = await utils.installAddon(driver);
+    await utils.installAddon(driver);
   });
 
   after(async() => {
