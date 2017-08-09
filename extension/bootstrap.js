@@ -124,10 +124,8 @@ function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
     CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
     // need to get using browserWindow.shareButton because the shareButton argument
     // was initialized before the button was added
-    doorhangerDoNothingTreatment(browserWindow, browserWindow.shareButton);
-  } else if (shareButtonIsUseable(shareButton)) {
-    doorhangerDoNothingTreatment(browserWindow, browserWindow.shareButton);
   }
+  doorhangerDoNothingTreatment(browserWindow, browserWindow.shareButton);
 }
 
 // define treatments as STRING: fn(browserWindow, shareButton)
