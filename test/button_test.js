@@ -375,7 +375,7 @@ describe("Summary Ping Tests", function() {
     await shareButton.click();
 
     const sharePanel = await driver.wait(until.elementLocated(
-      By.className("social-share-frame")), 3000);
+      By.className("social-share-frame")), 1000);
     await utils.testPanel(driver, "social-share-panel");
     await sharePanel.click();
     await sharePanel.click();
@@ -601,6 +601,18 @@ describe("DoorhangerAddToToolbar Treatment Tests", function() {
 
     await utils.copyUrlBar(driver);
     assert(await utils.promiseAddonButton(driver));
+  });
+
+  it("should only add the button to the toolbar once", async() => {
+    await utils.gotoURL(driver, MOZILLA_ORG);
+    await utils.copyUrlBar(driver);
+
+    assert(await utils.removeShareButton(driver));
+
+    await utils.copyUrlBar(driver);
+
+    const shareButton = await utils.promiseAddonButton(driver);
+    assert(shareButton === null);
   });
 
   it("popup should trigger on regular page", async() => {

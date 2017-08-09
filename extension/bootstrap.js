@@ -24,6 +24,7 @@ const REASONS = {
 };
 const COUNTER_PREF = "extensions.sharebuttonstudy.counter";
 const TREATMENT_OVERRIDE_PREF = "extensions.sharebuttonstudy.treatment";
+const ADDED_BOOL_PREF = "extensions.sharebuttonstudy.addedBool";
 const MAX_TIMES_TO_SHOW = 5;
 const SHAREBUTTON_CSS_URI = Services.io.newURI("resource://share-button-study/share_button.css");
 const PANEL_CSS_URI = Services.io.newURI("resource://share-button-study/panel.css");
@@ -81,8 +82,11 @@ async function doorhangerDoNothingTreatment(browserWindow, shareButton) {
 }
 
 async function doorhangerAskToAddTreatment(browserWindow, shareButton) {
+  // Do not re-add to toolbar if user removed manually
+  if (Preferences.get(ADDED_BOOL_PREF, false)) { return; }
+
   // check to see if we can share the page and if the share button has not yet been added
-  // if it ghas been added, we do not want to prompt to add
+  // if it has been added, we do not want to prompt to add
   if (currentPageIsShareable(browserWindow) && shareButton === null) {
     let panel = browserWindow.window.document.getElementById("share-button-ask-panel");
     if (panel === null) { // create the panel
@@ -97,6 +101,7 @@ async function doorhangerAskToAddTreatment(browserWindow, shareButton) {
         CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
         panel.hidePopup();
         highlightTreatment(browserWindow, browserWindow.shareButton);
+        Preferences.set(ADDED_BOOL_PREF, true);
       });
 
       const embeddedBrowser = browserWindow.window.document.createElement("browser");
@@ -123,7 +128,8 @@ async function doorhangerAskToAddTreatment(browserWindow, shareButton) {
 }
 
 async function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
-  // TODO do not re-add to toolbar if user removed manually?
+  // Do not re-add to toolbar if user removed manually
+  if (Preferences.get(ADDED_BOOL_PREF, false)) { return; }
 
   // check to see if the page will be shareable after adding the button to the toolbar
   if (currentPageIsShareable(browserWindow) && !shareButtonIsUseable(shareButton)) {
@@ -131,6 +137,7 @@ async function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
     await studyUtils.telemetry(pingData);
     await PingStorage.logPing(pingData);
     CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
+    Preferences.set(ADDED_BOOL_PREF, true);
     // need to get using browserWindow.shareButton because the shareButton argument
     // was initialized before the button was added
   }
@@ -380,6 +387,8 @@ this.startup = async function(data, reason) {
   if (reason === REASONS.ADDON_INSTALL) {
     // reset to counter to 0 primarily for testing purposes
     Preferences.set(COUNTER_PREF, 0);
+    // reset force added boolean pref
+    Preferences.set(ADDED_BOOL_PREF, false);
     studyUtils.firstSeen(); // sends telemetry "enter"
     const eligible = await config.isEligible(); // addon-specific
     if (!eligible) {

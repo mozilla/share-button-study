@@ -73,15 +73,23 @@ module.exports.addShareButton = async driver =>
 
 module.exports.removeShareButton = async(driver) => {
   try {
-    return driver.executeAsyncScript((callback) => {
+    // wait for the animation to end before running subsequent tests
+    await module.exports.waitForAnimationEnd(driver);
+    // close the popup
+    await module.exports.closePanel(driver);
+
+    await driver.executeAsyncScript((callback) => {
       Components.utils.import("resource:///modules/CustomizableUI.jsm");
       CustomizableUI.removeWidgetFromArea("social-share-button");
       callback();
     });
+
+    const shareButton = await module.exports.promiseAddonButton(driver);
+    return shareButton === null;
   } catch (e) {
-    if (e.type === "StaleElementReferenceError") {
-      console.log(e.msg); // eslint-disable-line no-console
-      return null;
+    if (e.name === "TimeoutError") {
+      console.log(e);
+      return false;
     }
     throw (e);
   }
@@ -115,7 +123,7 @@ module.exports.promiseAddonButton = async(driver) => {
   driver.setContext(Context.CHROME);
   try {
     return await driver.wait(until.elementLocated(
-      By.id("social-share-button")), 3000);
+      By.id("social-share-button")), 1000);
   } catch (e) {
     // if there an error, the button was not found
     // so return null
@@ -173,7 +181,7 @@ module.exports.waitForClassAdded = async(driver) => {
     const animationTest = await driver.wait(async() => {
       const { hasClass } = await module.exports.testAnimation(driver);
       return hasClass;
-    }, 2000);
+    }, 1000);
     return animationTest;
   } catch (e) {
     if (e.name === "TimeoutError") { return null; }
@@ -186,7 +194,7 @@ module.exports.waitForAnimationEnd = async(driver) => {
     return await driver.wait(async() => {
       const { hasClass, hasColor } = await module.exports.testAnimation(driver);
       return !hasClass && !hasColor;
-    }, 2000);
+    }, 1000);
   } catch (e) {
     if (e.name === "TimeoutError") { return null; }
     throw (e);
@@ -218,7 +226,7 @@ module.exports.testPanel = async(driver, panelId) => {
         }
       }, panelId);
       return panelState === "open";
-    }, 3000);
+    }, 1000);
   } catch (e) {
     if (e.name === "TimeoutError") { return null; }
     throw e;
