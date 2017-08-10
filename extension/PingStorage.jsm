@@ -61,7 +61,7 @@ this.PingStorage = {
 
   async logPing(pingData) {
     const db = await getDatabase();
-    const ping = Object.assign({ timestamp: new Date().toISOString() }, pingData);
+    const ping = Object.assign({ timestamp: new Date() }, pingData);
     return getStore(db).add(ping);
   },
 };
