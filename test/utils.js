@@ -115,7 +115,7 @@ module.exports.promiseAddonButton = async(driver) => {
   driver.setContext(Context.CHROME);
   try {
     return await driver.wait(until.elementLocated(
-      By.id("social-share-button")), 1000);
+      By.id("social-share-button")), 3000);
   } catch (e) {
     // if there an error, the button was not found
     // so return null

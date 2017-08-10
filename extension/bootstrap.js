@@ -9,6 +9,8 @@ XPCOMUtils.defineLazyModuleGetter(this, "studyUtils",
   "resource://share-button-study/StudyUtils.jsm");
 XPCOMUtils.defineLazyModuleGetter(this, "config",
   "resource://share-button-study/Config.jsm");
+XPCOMUtils.defineLazyModuleGetter(this, "PingStorage",
+  "resource://share-button-study/PingStorage.jsm");
 
 const REASONS = {
   APP_STARTUP:      1, // The application is starting up.
@@ -39,18 +41,22 @@ function shareButtonIsUseable(shareButton) {
     shareButton.getAttribute("overflowedItem") !== "true"; // but not in the overflow menu"
 }
 
-function highlightTreatment(browserWindow, shareButton) {
+async function highlightTreatment(browserWindow, shareButton) {
   if (shareButtonIsUseable(shareButton)) {
-    studyUtils.telemetry({ treatment: "highlight" });
+    const pingData = { treatment: "highlight" };
+    studyUtils.telemetry(pingData);
+    await PingStorage.logPing(pingData);
     // add the event listener to remove the css class when the animation ends
     shareButton.addEventListener("animationend", browserWindow.animationEndListener);
     shareButton.classList.add("social-share-button-on");
   }
 }
 
-function doorhangerDoNothingTreatment(browserWindow, shareButton) {
+async function doorhangerDoNothingTreatment(browserWindow, shareButton) {
   if (shareButtonIsUseable(shareButton)) {
-    studyUtils.telemetry({ treatment: "doorhanger" });
+    const pingData = { treatment: "doorhanger" };
+    studyUtils.telemetry(pingData);
+    await PingStorage.logPing(pingData);
     let panel = browserWindow.window.document.getElementById("share-button-panel");
     if (panel === null) { // create the panel
       panel = browserWindow.window.document.createElement("panel");
@@ -74,7 +80,7 @@ function doorhangerDoNothingTreatment(browserWindow, shareButton) {
   }
 }
 
-function doorhangerAskToAddTreatment(browserWindow, shareButton) {
+async function doorhangerAskToAddTreatment(browserWindow, shareButton) {
   // check to see if we can share the page and if the share button has not yet been added
   // if it ghas been added, we do not want to prompt to add
   if (currentPageIsShareable(browserWindow) && shareButton === null) {
@@ -106,7 +112,9 @@ function doorhangerAskToAddTreatment(browserWindow, shareButton) {
     const burgerMenu = browserWindow.window.document.getElementById("PanelUI-menu-button");
     if (burgerMenu !== null) {
       // only send the telemetry ping if we actually open the panel
-      studyUtils.telemetry({ treatment: "ask-to-add" });
+      const pingData = { treatment: "ask-to-add" };
+      studyUtils.telemetry(pingData);
+      await PingStorage.logPing(pingData);
       panel.openPopup(burgerMenu, "bottomcenter topright", 0, 0, false, false);
     }
   } else if (shareButtonIsUseable(shareButton)) {
@@ -114,12 +122,14 @@ function doorhangerAskToAddTreatment(browserWindow, shareButton) {
   }
 }
 
-function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
+async function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
   // TODO do not re-add to toolbar if user removed manually?
 
   // check to see if the page will be shareable after adding the button to the toolbar
   if (currentPageIsShareable(browserWindow) && !shareButtonIsUseable(shareButton)) {
-    studyUtils.telemetry({ treatment: "add-to-toolbar" });
+    const pingData = { treatment: "add-to-toolbar" };
+    studyUtils.telemetry(pingData);
+    await PingStorage.logPing(pingData);
     CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
     // need to get using browserWindow.shareButton because the shareButton argument
     // was initialized before the button was added
@@ -173,15 +183,19 @@ class CopyController {
 
   isCommandEnabled(cmd) { return true; }
 
-  doCommand(cmd) {
+  async doCommand(cmd) {
     if (cmd === "cmd_copy") {
-      studyUtils.telemetry({ event: "copy" });
+      const pingData = { event: "copy" };
+      studyUtils.telemetry(pingData);
+      // FIXME Cannot await within CopyController
+      await PingStorage.logPing(pingData);
       const shareButton = this.browserWindow.shareButton;
       // check to see if we should call a treatment at all
       const numberOfTimeShown = Preferences.get(COUNTER_PREF, 0);
       if (numberOfTimeShown < MAX_TIMES_TO_SHOW) {
         Preferences.set(COUNTER_PREF, numberOfTimeShown + 1);
-        TREATMENTS[this.treatment](this.browserWindow, shareButton);
+        // FIXME Cannot await within CopyController
+        await TREATMENTS[this.treatment](this.browserWindow, shareButton);
       }
     }
     // Iterate over all other controllers and call doCommand on the first controller
