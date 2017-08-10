@@ -22,10 +22,11 @@ const Context = firefox.Context;
     // set the treatment
     await driver.executeAsyncScript((typeArg, callback) => {
       Components.utils.import("resource://gre/modules/Preferences.jsm");
-      // using the rest parameters, treatment = args[0]
-      Preferences.set("extensions.sharebuttonstudy.treatment", typeArg);
+      if (typeArg !== null) {
+        Preferences.set("extensions.sharebuttonstudy.treatment", typeArg);
+      }
       callback();
-    }, "doorhangerAskToAdd");
+    }, null);
     // install the addon
     await utils.installAddon(driver);
 

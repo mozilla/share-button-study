@@ -136,18 +136,29 @@ const TREATMENTS = {
 };
 
 async function chooseVariation() {
+  let variation;
+  // if pref has a user-set value, use this instead
+  if (Preferences.isSet(TREATMENT_OVERRIDE_PREF)) {
+    variation = {
+      name: Preferences.get(TREATMENT_OVERRIDE_PREF, null), // there is no default value
+      weight: 1,
+    };
+    if (variation.name in TREATMENTS) { return variation; }
+    // if the variation from the pref is invalid, then fall back to standard choosing
+  }
+
   const sample = studyUtils.sample;
   // this is the standard arm choosing method
   const clientId = await studyUtils.getTelemetryId();
   const hashFraction = await sample.hashFraction(config.study.studyName + clientId);
-  let variation = sample.chooseWeighted(config.study.weightedVariations, hashFraction);
+  variation = sample.chooseWeighted(config.study.weightedVariations, hashFraction);
 
-  // if pref has a user-set value, use this instead
-  if (Preferences.isSet(TREATMENT_OVERRIDE_PREF)) {
-    variation = { name: Preferences.get(TREATMENT_OVERRIDE_PREF, variation),
-      weight: 1 };
-    Preferences.reset(TREATMENT_OVERRIDE_PREF); // reset to default branch value to clear
+  // if the variation chosen by chooseWeighted is not a valid treatment (check in TREATMENTS),
+  // then throw an exception: this means that the config file is wrong
+  if (!(variation.name in TREATMENTS)) {
+    throw new Error(`The variation "${variation.name}" is not a valid variation.`);
   }
+
   return variation;
 }
 
@@ -168,8 +179,7 @@ class CopyController {
       const shareButton = this.browserWindow.shareButton;
       // check to see if we should call a treatment at all
       const numberOfTimeShown = Preferences.get(COUNTER_PREF, 0);
-      if (numberOfTimeShown < MAX_TIMES_TO_SHOW &&
-          Object.keys(TREATMENTS).includes(this.treatment)) {
+      if (numberOfTimeShown < MAX_TIMES_TO_SHOW) {
         Preferences.set(COUNTER_PREF, numberOfTimeShown + 1);
         TREATMENTS[this.treatment](this.browserWindow, shareButton);
       }
