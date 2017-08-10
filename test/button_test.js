@@ -516,9 +516,13 @@ describe("DoorhangerAskToAdd Treatment Tests", function() {
 
   it("should open an ask panel on a regular page without the share button", async() => {
     await utils.gotoURL(driver, MOZILLA_ORG);
+    console.log("gotoURL");
 
     await utils.copyUrlBar(driver);
+    console.log("copyURLBar");
+
     const panelOpened = await utils.testPanel(driver, "share-button-ask-panel");
+    console.log("panelOpened");
     assert(panelOpened);
   });
 
