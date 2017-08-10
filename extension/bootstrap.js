@@ -208,14 +208,12 @@ class CopyController {
 
       const pingData = { event: "copy" };
       await studyUtils.telemetry(pingData);
-      // FIXME Cannot await within CopyController
       await PingStorage.logPing(pingData);
       const shareButton = this.browserWindow.shareButton;
       // check to see if we should call a treatment at all
       const numberOfTimeShown = Preferences.get(COUNTER_PREF, 0);
       if (numberOfTimeShown < MAX_TIMES_TO_SHOW) {
         Preferences.set(COUNTER_PREF, numberOfTimeShown + 1);
-        // FIXME Cannot await within CopyController
         await TREATMENTS[this.treatment](this.browserWindow, shareButton);
       }
     }
