@@ -104,7 +104,6 @@ function doorhangerAskToAddTreatment(browserWindow, shareButton) {
       browserWindow.window.document.getElementById("mainPopupSet").appendChild(panel);
     }
     const burgerMenu = browserWindow.window.document.getElementById("PanelUI-menu-button");
-    // TODO What if there is no burger menu?
     if (burgerMenu !== null) {
       // only send the telemetry ping if we actually open the panel
       studyUtils.telemetry({ treatment: "ask-to-add" });
