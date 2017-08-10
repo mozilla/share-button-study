@@ -4,12 +4,11 @@ const EXPORTED_SYMBOLS = ["config"];
 const config = {
   study: {
     studyName: "share-button-study", // no spaces, for all the reasons
-    variation: {
-      name: "ALL",
-    }, // optional, use to override/decide
+    variation: { }, // optional, use to override/decide;
     weightedVariations: [
-      { name: "control", weight: 1 },
-      { name: "doorhanger", weight: 1 },
+      { name: "doorhangerDoNothing", weight: 1 },
+      { name: "doorhangerAskToAdd", weight: 1 },
+      { name: "doorhangerAddToToolbar", weight: 1 },
       { name: "highlight", weight: 1 },
     ],
     /** **endings**

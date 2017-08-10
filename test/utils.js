@@ -71,6 +71,22 @@ module.exports.addShareButton = async driver =>
     callback();
   });
 
+module.exports.removeShareButton = async(driver) => {
+  try {
+    return driver.executeAsyncScript((callback) => {
+      Components.utils.import("resource:///modules/CustomizableUI.jsm");
+      CustomizableUI.removeWidgetFromArea("social-share-button");
+      callback();
+    });
+  } catch (e) {
+    if (e.type === "StaleElementReferenceError") {
+      console.log(e.msg); // eslint-disable-line no-console
+      return null;
+    }
+    throw (e);
+  }
+};
+
 module.exports.installAddon = async(driver) => {
   // references:
   //    https://bugzilla.mozilla.org/show_bug.cgi?id=1298025
@@ -175,20 +191,20 @@ module.exports.takeScreenshot = async(driver) => {
   }
 };
 
-module.exports.testPanel = async(driver) => {
+module.exports.testPanel = async(driver, panelId) => {
   driver.setContext(Context.CHROME);
   try { // if we can't find the panel, return false
     return await driver.wait(async() => {
       // need to execute JS, since state is not an HTML attribute, it's a property
-      const panelState = await driver.executeAsyncScript((callback) => {
-        const shareButtonPanel = window.document.getElementById("share-button-panel");
+      const panelState = await driver.executeAsyncScript((panelIdArg, callback) => {
+        const shareButtonPanel = window.document.getElementById(panelIdArg);
         if (shareButtonPanel === null) {
           callback(null);
         } else {
           const state = shareButtonPanel.state;
           callback(state);
         }
-      });
+      }, panelId);
       return panelState === "open";
     }, 3000);
   } catch (e) {
@@ -206,10 +222,7 @@ module.exports.closePanel = async(driver) => {
 // first element is most recent ping
 // as seen in shield-study-addon-util's `utils.jsm`
 module.exports.getMostRecentPingsByType = async(driver, type) =>
-  driver.executeAsyncScript(async() => {
-    const typeArg = arguments[0];
-    const callback = arguments[arguments.length - 1];
-
+  driver.executeAsyncScript(async(typeArg, callback) => {
     Components.utils.import("resource://gre/modules/TelemetryArchive.jsm");
     const pings = await TelemetryArchive.promiseArchivedPingList();
 
@@ -220,3 +233,10 @@ module.exports.getMostRecentPingsByType = async(driver, type) =>
 
     callback(await Promise.all(pingData));
   }, type);
+
+module.exports.gotoURL = async(driver, url) => {
+  // navigate to a regular page
+  driver.setContext(Context.CONTENT);
+  await driver.get(url);
+  driver.setContext(Context.CHROME);
+};

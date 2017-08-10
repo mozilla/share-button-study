@@ -4,6 +4,7 @@ Cu.import("resource://gre/modules/Console.jsm");
 Cu.import("resource://gre/modules/AppConstants.jsm");
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 Cu.import("resource://gre/modules/Preferences.jsm");
+Cu.import("resource:///modules/CustomizableUI.jsm");
 XPCOMUtils.defineLazyModuleGetter(this, "studyUtils",
   "resource://share-button-study/StudyUtils.jsm");
 XPCOMUtils.defineLazyModuleGetter(this, "config",
@@ -19,60 +20,145 @@ const REASONS = {
   ADDON_UPGRADE:    7, // The add-on is being upgraded.
   ADDON_DOWNGRADE:  8, // The add-on is being downgraded.
 };
-
+const COUNTER_PREF = "extensions.sharebuttonstudy.counter";
+const TREATMENT_OVERRIDE_PREF = "extensions.sharebuttonstudy.treatment";
 const MAX_TIMES_TO_SHOW = 5;
 const SHAREBUTTON_CSS_URI = Services.io.newURI("resource://share-button-study/share_button.css");
 const PANEL_CSS_URI = Services.io.newURI("resource://share-button-study/panel.css");
 const browserWindowWeakMap = new WeakMap();
 
-function doorhangerTreatment(browserWindow, shareButton) {
-  studyUtils.telemetry({ treatment: "doorhanger" });
-  let panel = browserWindow.window.document.getElementById("share-button-panel");
-  if (panel === null) { // create the panel
-    panel = browserWindow.window.document.createElement("panel");
-    panel.setAttribute("id", "share-button-panel");
-    panel.setAttribute("type", "arrow");
-    panel.setAttribute("noautofocus", true);
-    panel.setAttribute("level", "parent");
+function currentPageIsShareable(browserWindow) {
+  const uri = browserWindow.window.gBrowser.currentURI;
+  return uri.schemeIs("http") || uri.schemeIs("https");
+}
 
-    const embeddedBrowser = browserWindow.window.document.createElement("browser");
-    embeddedBrowser.setAttribute("id", "share-button-doorhanger");
-    embeddedBrowser.setAttribute("src", "resource://share-button-study/doorhanger.html");
-    embeddedBrowser.setAttribute("type", "content");
-    embeddedBrowser.setAttribute("disableglobalhistory", "true");
-    embeddedBrowser.setAttribute("flex", "1");
-
-    panel.appendChild(embeddedBrowser);
-    browserWindow.window.document.getElementById("mainPopupSet").appendChild(panel);
-  }
-  panel.openPopup(shareButton, "bottomcenter topright", 0, 0, false, false);
+function shareButtonIsUseable(shareButton) {
+  return shareButton !== null && // the button exists
+    shareButton.getAttribute("disabled") !== "true" && // the page we are on can be shared
+    shareButton.getAttribute("cui-areatype") === "toolbar" && // the button is in the toolbar
+    shareButton.getAttribute("overflowedItem") !== "true"; // but not in the overflow menu"
 }
 
 function highlightTreatment(browserWindow, shareButton) {
-  studyUtils.telemetry({ treatment: "highlight" });
-  // add the event listener to remove the css class when the animation ends
-  shareButton.addEventListener("animationend", browserWindow.animationEndListener);
-  shareButton.classList.add("social-share-button-on");
+  if (shareButtonIsUseable(shareButton)) {
+    studyUtils.telemetry({ treatment: "highlight" });
+    // add the event listener to remove the css class when the animation ends
+    shareButton.addEventListener("animationend", browserWindow.animationEndListener);
+    shareButton.classList.add("social-share-button-on");
+  }
+}
+
+function doorhangerDoNothingTreatment(browserWindow, shareButton) {
+  if (shareButtonIsUseable(shareButton)) {
+    studyUtils.telemetry({ treatment: "doorhanger" });
+    let panel = browserWindow.window.document.getElementById("share-button-panel");
+    if (panel === null) { // create the panel
+      panel = browserWindow.window.document.createElement("panel");
+      panel.setAttribute("id", "share-button-panel");
+      panel.setAttribute("class", "no-padding-panel");
+      panel.setAttribute("type", "arrow");
+      panel.setAttribute("noautofocus", true);
+      panel.setAttribute("level", "parent");
+
+      const embeddedBrowser = browserWindow.window.document.createElement("browser");
+      embeddedBrowser.setAttribute("id", "share-button-doorhanger");
+      embeddedBrowser.setAttribute("src", "resource://share-button-study/doorhanger.html");
+      embeddedBrowser.setAttribute("type", "content");
+      embeddedBrowser.setAttribute("disableglobalhistory", "true");
+      embeddedBrowser.setAttribute("flex", "1");
+
+      panel.appendChild(embeddedBrowser);
+      browserWindow.window.document.getElementById("mainPopupSet").appendChild(panel);
+    }
+    panel.openPopup(shareButton, "bottomcenter topright", 0, 0, false, false);
+  }
+}
+
+function doorhangerAskToAddTreatment(browserWindow, shareButton) {
+  // check to see if we can share the page and if the share button has not yet been added
+  // if it ghas been added, we do not want to prompt to add
+  if (currentPageIsShareable(browserWindow) && shareButton === null) {
+    let panel = browserWindow.window.document.getElementById("share-button-ask-panel");
+    if (panel === null) { // create the panel
+      panel = browserWindow.window.document.createElement("panel");
+      panel.setAttribute("id", "share-button-ask-panel");
+      panel.setAttribute("class", "no-padding-panel");
+      panel.setAttribute("type", "arrow");
+      panel.setAttribute("noautofocus", true);
+      panel.setAttribute("level", "parent");
+
+      panel.addEventListener("click", (e) => {
+        CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
+        panel.hidePopup();
+        highlightTreatment(browserWindow, browserWindow.shareButton);
+      });
+
+      const embeddedBrowser = browserWindow.window.document.createElement("browser");
+      embeddedBrowser.setAttribute("id", "share-button-ask-doorhanger");
+      embeddedBrowser.setAttribute("src", "resource://share-button-study/ask.html");
+      embeddedBrowser.setAttribute("type", "content");
+      embeddedBrowser.setAttribute("disableglobalhistory", "true");
+      embeddedBrowser.setAttribute("flex", "1");
+
+      panel.appendChild(embeddedBrowser);
+      browserWindow.window.document.getElementById("mainPopupSet").appendChild(panel);
+    }
+    const burgerMenu = browserWindow.window.document.getElementById("PanelUI-menu-button");
+    if (burgerMenu !== null) {
+      // only send the telemetry ping if we actually open the panel
+      studyUtils.telemetry({ treatment: "ask-to-add" });
+      panel.openPopup(burgerMenu, "bottomcenter topright", 0, 0, false, false);
+    }
+  } else if (shareButtonIsUseable(shareButton)) {
+    doorhangerDoNothingTreatment(browserWindow, browserWindow.shareButton);
+  }
+}
+
+function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
+  // TODO do not re-add to toolbar if user removed manually?
+
+  // check to see if the page will be shareable after adding the button to the toolbar
+  if (currentPageIsShareable(browserWindow) && !shareButtonIsUseable(shareButton)) {
+    studyUtils.telemetry({ treatment: "add-to-toolbar" });
+    CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
+    // need to get using browserWindow.shareButton because the shareButton argument
+    // was initialized before the button was added
+  }
+  doorhangerDoNothingTreatment(browserWindow, browserWindow.shareButton);
 }
 
 // define treatments as STRING: fn(browserWindow, shareButton)
 const TREATMENTS = {
-  doorhanger: doorhangerTreatment,
-  highlight: highlightTreatment,
+  highlight:              highlightTreatment,
+  doorhangerDoNothing:    doorhangerDoNothingTreatment,
+  doorhangerAskToAdd:     doorhangerAskToAddTreatment,
+  doorhangerAddToToolbar: doorhangerAddToToolbarTreatment,
 };
 
 async function chooseVariation() {
   let variation;
-  const sample = studyUtils.sample;
-
-  if (config.study.variation) {
-    variation = config.study.variation;
-  } else {
-    // this is the standard arm choosing method
-    const clientId = await studyUtils.getTelemetryId();
-    const hashFraction = await sample.hashFraction(config.study.studyName + clientId);
-    variation = sample.chooseWeighted(config.study.weightedVariations, hashFraction);
+  // if pref has a user-set value, use this instead
+  if (Preferences.isSet(TREATMENT_OVERRIDE_PREF)) {
+    variation = {
+      name: Preferences.get(TREATMENT_OVERRIDE_PREF, null), // there is no default value
+      weight: 1,
+    };
+    if (variation.name in TREATMENTS) { return variation; }
+    // if the variation from the pref is invalid, then fall back to standard choosing
   }
+
+  const sample = studyUtils.sample;
+  // this is the standard arm choosing method
+  const clientId = await studyUtils.getTelemetryId();
+  const hashFraction = await sample.hashFraction(config.study.studyName + clientId);
+  variation = sample.chooseWeighted(config.study.weightedVariations, hashFraction);
+
+  // if the variation chosen by chooseWeighted is not a valid treatment (check in TREATMENTS),
+  // then throw an exception: this means that the config file is wrong
+  if (!(variation.name in TREATMENTS)) {
+    throw new Error(`The variation "${variation.name}" is not a valid variation.`);
+  }
+
   return variation;
 }
 
@@ -91,25 +177,11 @@ class CopyController {
     if (cmd === "cmd_copy") {
       studyUtils.telemetry({ event: "copy" });
       const shareButton = this.browserWindow.shareButton;
-      if (shareButton !== null && // the button exists
-          shareButton.getAttribute("disabled") !== "true" && // the page we are on can be shared
-          shareButton.getAttribute("cui-areatype") === "toolbar" && // the button is in the toolbar
-          shareButton.getAttribute("overflowedItem") !== "true") { // but not in the overflow menu
-        // check to see if we should call a treatment at all
-        const numberOfTimeShown = Preferences.get("extensions.sharebuttonstudy.counter", 0);
-        if (numberOfTimeShown < MAX_TIMES_TO_SHOW) {
-          Preferences.set("extensions.sharebuttonstudy.counter", numberOfTimeShown + 1);
-
-          if (this.treatment === "ALL") {
-            Object.keys(TREATMENTS).forEach((key, index) => {
-              if (Object.prototype.hasOwnProperty.call(TREATMENTS, key)) {
-                TREATMENTS[key](this.browserWindow, shareButton);
-              }
-            });
-          } else if (this.treatment in TREATMENTS.keys()) {
-            TREATMENTS[this.treatment](this.browserWindow, shareButton);
-          }
-        }
+      // check to see if we should call a treatment at all
+      const numberOfTimeShown = Preferences.get(COUNTER_PREF, 0);
+      if (numberOfTimeShown < MAX_TIMES_TO_SHOW) {
+        Preferences.set(COUNTER_PREF, numberOfTimeShown + 1);
+        TREATMENTS[this.treatment](this.browserWindow, shareButton);
       }
     }
     // Iterate over all other controllers and call doCommand on the first controller
@@ -238,6 +310,11 @@ class BrowserWindow {
     if (sharePanel !== null) {
       sharePanel.remove();
     }
+    // Remove the share-button-ask-panel
+    const shareAskPanel = this.window.document.getElementById("share-button-ask-panel");
+    if (shareAskPanel !== null) {
+      shareAskPanel.remove();
+    }
 
     // Remove modifications to shareButton (modified in CopyController)
     if (this.shareButton !== null) {
@@ -288,6 +365,8 @@ this.startup = async function(data, reason) {
   // TODO Import config.modules?
 
   if (reason === REASONS.ADDON_INSTALL) {
+    // reset to counter to 0 primarily for testing purposes
+    Preferences.set(COUNTER_PREF, 0);
     studyUtils.firstSeen(); // sends telemetry "enter"
     const eligible = await config.isEligible(); // addon-specific
     if (!eligible) {
@@ -332,9 +411,8 @@ this.shutdown = function(data, reason) {
   // are we uninstalling?
   // if so, user or automatic?
   if (reason === REASONS.ADDON_UNINSTALL || reason === REASONS.ADDON_DISABLE) {
-    // reset the preference in case of uninstall or disable, primarily for testing
-    // purposes
-    Preferences.set("extensions.sharebuttonstudy.counter", 0);
+    // reset the preference in case of uninstall or disable
+    Preferences.reset(COUNTER_PREF);
     if (!studyUtils._isEnding) {
       // we are the first requestors, must be user action.
       studyUtils.endStudy({ reason: "user-disable" });
