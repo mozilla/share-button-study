@@ -196,9 +196,8 @@ module.exports.testPanel = async(driver, panelId) => {
   try { // if we can't find the panel, return false
     return await driver.wait(async() => {
       // need to execute JS, since state is not an HTML attribute, it's a property
-      const panelState = await driver.executeAsyncScript((...args) => {
-        const callback = args[args.length - 1];
-        const shareButtonPanel = window.document.getElementById(args[0]);
+      const panelState = await driver.executeAsyncScript((panelIdArg, callback) => {
+        const shareButtonPanel = window.document.getElementById(panelIdArg);
         if (shareButtonPanel === null) {
           callback(null);
         } else {
@@ -223,10 +222,7 @@ module.exports.closePanel = async(driver) => {
 // first element is most recent ping
 // as seen in shield-study-addon-util's `utils.jsm`
 module.exports.getMostRecentPingsByType = async(driver, type) =>
-  driver.executeAsyncScript(async(...args) => {
-    const typeArg = args[0];
-    const callback = args[args.length - 1];
-
+  driver.executeAsyncScript(async(typeArg, callback) => {
     Components.utils.import("resource://gre/modules/TelemetryArchive.jsm");
     const pings = await TelemetryArchive.promiseArchivedPingList();
 

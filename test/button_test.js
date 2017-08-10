@@ -44,8 +44,7 @@ async function postTestReset(driver) {
   // close the popup
   await utils.closePanel(driver);
   // reset the counter pref to 0 so that the treatment is always shown
-  await driver.executeAsyncScript((...args) => {
-    const callback = args[args.length - 1];
+  await driver.executeAsyncScript((callback) => {
     Components.utils.import("resource://gre/modules/Preferences.jsm");
     const COUNTER_PREF = "extensions.sharebuttonstudy.counter";
     if (Preferences.has(COUNTER_PREF)) {
@@ -56,11 +55,10 @@ async function postTestReset(driver) {
 }
 
 async function setTreatment(driver, treatment) {
-  return driver.executeAsyncScript((...args) => {
-    const callback = args[args.length - 1];
+  return driver.executeAsyncScript((treatmentArg, callback) => {
     Components.utils.import("resource://gre/modules/Preferences.jsm");
     // using the rest parameters, treatment = args[0]
-    Preferences.set("extensions.sharebuttonstudy.treatment", args[0]);
+    Preferences.set("extensions.sharebuttonstudy.treatment", treatmentArg);
     callback();
   }, treatment);
 }
@@ -219,6 +217,7 @@ describe("Highlight Treatment Tests", function() {
   });
 
   it("should send highlight and copy telemetry pings", async() => {
+    await utils.addShareButton(driver);
     await utils.gotoURL(driver, "http://mozilla.org");
 
     await utils.copyUrlBar(driver);
