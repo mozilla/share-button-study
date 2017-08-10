@@ -352,8 +352,9 @@ describe("Summary Ping Tests", function() {
       [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
       pings);
     assert(foundPings.length > 0);
-    assert(JSON.parse(foundPings[0].payload.data.attributes.numberOfTimesURLBarCopied) === 3,
-      JSON.parse(foundPings[0].payload.data.attributes.numberOfTimesURLBarCopied));
+    const urlBarCopies = JSON.parse(foundPings[0].payload.data.attributes
+      .numberOfTimesURLBarCopied);
+    assert(urlBarCopies === 3, `Expected 3 urlBarCopies, instead urlBarCopies = ${urlBarCopies}`);
   });
 
   it("should report the correct number of share button clicks", async() => {
@@ -372,8 +373,9 @@ describe("Summary Ping Tests", function() {
       [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
       pings);
     assert(foundPings.length > 0);
-    assert(JSON.parse(foundPings[0].payload.data.attributes.numberOfShareButtonClicks) === 2,
-      JSON.parse(foundPings[0].payload.data.attributes.numberOfShareButtonClicks));
+    const shareButtonClicks = JSON.parse(foundPings[0].payload.data.attributes
+      .numberOfShareButtonClicks);
+    assert(shareButtonClicks === 2, `Expected 2 shareButtonClicks, instead shareButtonClicks = ${shareButtonClicks}`);
   });
 
   it("should report the correct number of share panel clicks", async() => {
@@ -399,8 +401,9 @@ describe("Summary Ping Tests", function() {
       [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
       pings);
     assert(foundPings.length > 0);
-    assert(JSON.parse(foundPings[0].payload.data.attributes.numberOfSharePanelClicks) === 4,
-      JSON.parse(foundPings[0].payload.data.attributes.numberOfSharePanelClicks));
+    const sharePanelClicks = JSON.parse(foundPings[0].payload.data.attributes
+      .numberOfSharePanelClicks);
+    assert(sharePanelClicks === 4, `Expected 4 sharePanelClicks, instead sharePanelClicks = ${sharePanelClicks}`);
   });
 
   it("should log a summary ping for highlight treatment", async() => {
