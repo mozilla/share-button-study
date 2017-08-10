@@ -48,11 +48,9 @@ async function overflowMenuTest(driver, test, url) {
 }
 
 async function setTreatment(driver, treatment) {
-  return driver.executeAsyncScript((...args) => {
-    const callback = args[args.length - 1];
+  return driver.executeAsyncScript((treatmentArg, callback) => {
     Components.utils.import("resource://gre/modules/Preferences.jsm");
-    // using the rest parameters, treatment = args[0]
-    Preferences.set("extensions.sharebuttonstudy.treatment", args[0]);
+    Preferences.set("extensions.sharebuttonstudy.treatment", treatmentArg);
     callback();
   }, treatment);
 }
