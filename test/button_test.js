@@ -352,7 +352,8 @@ describe("Summary Ping Tests", function() {
       [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
       pings);
     assert(foundPings.length > 0);
-    assert(JSON.parse(foundPings[0].payload.data.attributes.numberOfTimesURLBarCopied) === 3);
+    assert(JSON.parse(foundPings[0].payload.data.attributes.numberOfTimesURLBarCopied) === 3,
+      JSON.parse(foundPings[0].payload.data.attributes.numberOfTimesURLBarCopied));
   });
 
   it("should report the correct number of share button clicks", async() => {
@@ -371,7 +372,8 @@ describe("Summary Ping Tests", function() {
       [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
       pings);
     assert(foundPings.length > 0);
-    assert(JSON.parse(foundPings[0].payload.data.attributes.numberOfShareButtonClicks) === 2);
+    assert(JSON.parse(foundPings[0].payload.data.attributes.numberOfShareButtonClicks) === 2,
+      JSON.parse(foundPings[0].payload.data.attributes.numberOfShareButtonClicks));
   });
 
   it("should report the correct number of share panel clicks", async() => {
@@ -397,7 +399,8 @@ describe("Summary Ping Tests", function() {
       [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
       pings);
     assert(foundPings.length > 0);
-    assert(JSON.parse(foundPings[0].payload.data.attributes.numberOfSharePanelClicks) === 4);
+    assert(JSON.parse(foundPings[0].payload.data.attributes.numberOfSharePanelClicks) === 4,
+      JSON.parse(foundPings[0].payload.data.attributes.numberOfSharePanelClicks));
   });
 
   it("should log a summary ping for highlight treatment", async() => {
