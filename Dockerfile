@@ -7,6 +7,8 @@ RUN apt-get update -y && \
     curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
     echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list && \
     apt-get update -y && \
-    apt-get install -y zip firefox xvfb nodejs yarn xsel git ssh openbox
+    apt-get install -y firefox zip xvfb nodejs yarn xsel git ssh openbox bzip2 && \
+    npm install -g get-firefox && \
+    get-firefox -b beta -t /firefox.tar.bz2 && tar -xvjf /firefox.tar.bz2 -C /
 
 ENV PATH="/share-button-study/node_modules/.bin:$PATH"

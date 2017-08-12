@@ -17,7 +17,7 @@
     "selenium-webdriver": "^3.4.0"
   },
   "devDependencies": {
-    "eslint": "^4.0.0",
+    "eslint": "^4.4.1",
     "eslint-config-airbnb-base": "^11.2.0",
     "eslint-plugin-import": "^2.5.0"
   },
@@ -25,7 +25,7 @@
     "postinstall": "./bin/patch_webdriver.sh",
     "lint": "eslint .",
     "build": "./bin/make_xpi.sh",
-    "test": "export FIREFOX_BINARY=firefox XPI_NAME=extension/share-button-study.xpi && npm run build && mocha test --retry 2",
-    "man": "export FIREFOX_BINARY=firefox XPI_NAME=extension/share-button-study.xpi && npm run build && node manual_test.js"
+    "test": "export XPI_NAME=extension/share-button-study.xpi && npm run build && mocha test --retry 2",
+    "man": "export XPI_NAME=extension/share-button-study.xpi && npm run build && node manual_test.js"
   }
 }

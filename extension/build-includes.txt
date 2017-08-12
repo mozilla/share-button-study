@@ -10,3 +10,4 @@ panel.css
 share.svg
 StudyUtils.jsm
 Config.jsm
+PingStorage.jsm

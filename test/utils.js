@@ -115,7 +115,7 @@ module.exports.promiseAddonButton = async(driver) => {
   driver.setContext(Context.CHROME);
   try {
     return await driver.wait(until.elementLocated(
-      By.id("social-share-button")), 1000);
+      By.id("social-share-button")), 3000);
   } catch (e) {
     // if there an error, the button was not found
     // so return null
@@ -168,18 +168,30 @@ module.exports.testAnimation = async(driver) => {
   return { hasClass, hasColor };
 };
 
-// FIXME waitForClassAdded is no longer being used?
-module.exports.waitForClassAdded = async driver =>
-  driver.wait(async() => {
-    const { hasClass } = await module.exports.testAnimation(driver);
-    return hasClass;
-  }, 2000);
+module.exports.waitForClassAdded = async(driver) => {
+  try {
+    const animationTest = await driver.wait(async() => {
+      const { hasClass } = await module.exports.testAnimation(driver);
+      return hasClass;
+    }, 2000);
+    return animationTest;
+  } catch (e) {
+    if (e.name === "TimeoutError") { return null; }
+    throw (e);
+  }
+};
 
-module.exports.waitForAnimationEnd = async driver =>
-  driver.wait(async() => {
-    const { hasClass, hasColor } = await module.exports.testAnimation(driver);
-    return !hasClass && !hasColor;
-  }, 2000);
+module.exports.waitForAnimationEnd = async(driver) => {
+  try {
+    return await driver.wait(async() => {
+      const { hasClass, hasColor } = await module.exports.testAnimation(driver);
+      return !hasClass && !hasColor;
+    }, 2000);
+  } catch (e) {
+    if (e.name === "TimeoutError") { return null; }
+    throw (e);
+  }
+};
 
 module.exports.takeScreenshot = async(driver) => {
   try {
@@ -213,9 +225,13 @@ module.exports.testPanel = async(driver, panelId) => {
   }
 };
 
-module.exports.closePanel = async(driver) => {
-  const urlbar = await module.exports.promiseUrlBar(driver);
-  await urlbar.sendKeys(webdriver.Key.ESCAPE);
+module.exports.closePanel = async(driver, target = null) => {
+  if (target !== null) {
+    target.sendKeys(webdriver.Key.ESCAPE);
+  } else {
+    const urlbar = await module.exports.promiseUrlBar(driver);
+    await urlbar.sendKeys(webdriver.Key.ESCAPE);
+  }
 };
 
 // Returns array of pings of type `type` in sorted order by timestamp
@@ -239,4 +255,23 @@ module.exports.gotoURL = async(driver, url) => {
   driver.setContext(Context.CONTENT);
   await driver.get(url);
   driver.setContext(Context.CHROME);
+};
+
+class SearchError extends Error {
+  constructor(condition) {
+    const message = `Could not find ping satisfying condition: ${condition.toString()}`;
+    super(message);
+    this.message = message;
+    this.name = "SearchError";
+  }
+}
+
+module.exports.searchTelemetry = (conditionArray, telemetryArray) => {
+  const resultingPings = [];
+  for (const condition of conditionArray) {
+    const index = telemetryArray.findIndex(ping => condition(ping));
+    if (index === -1) { throw new SearchError(condition); }
+    resultingPings.push(telemetryArray[index]);
+  }
+  return resultingPings;
 };

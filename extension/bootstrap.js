@@ -1,4 +1,4 @@
-const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
+const { interfaces: Ci, utils: Cu } = Components;
 Cu.import("resource://gre/modules/Services.jsm");
 Cu.import("resource://gre/modules/Console.jsm");
 Cu.import("resource://gre/modules/AppConstants.jsm");
@@ -9,6 +9,8 @@ XPCOMUtils.defineLazyModuleGetter(this, "studyUtils",
   "resource://share-button-study/StudyUtils.jsm");
 XPCOMUtils.defineLazyModuleGetter(this, "config",
   "resource://share-button-study/Config.jsm");
+XPCOMUtils.defineLazyModuleGetter(this, "PingStorage",
+  "resource://share-button-study/PingStorage.jsm");
 
 const REASONS = {
   APP_STARTUP:      1, // The application is starting up.
@@ -39,18 +41,22 @@ function shareButtonIsUseable(shareButton) {
     shareButton.getAttribute("overflowedItem") !== "true"; // but not in the overflow menu"
 }
 
-function highlightTreatment(browserWindow, shareButton) {
+async function highlightTreatment(browserWindow, shareButton) {
   if (shareButtonIsUseable(shareButton)) {
-    studyUtils.telemetry({ treatment: "highlight" });
+    const pingData = { treatment: "highlight" };
+    await studyUtils.telemetry(pingData);
+    await PingStorage.logPing(pingData);
     // add the event listener to remove the css class when the animation ends
     shareButton.addEventListener("animationend", browserWindow.animationEndListener);
     shareButton.classList.add("social-share-button-on");
   }
 }
 
-function doorhangerDoNothingTreatment(browserWindow, shareButton) {
+async function doorhangerDoNothingTreatment(browserWindow, shareButton) {
   if (shareButtonIsUseable(shareButton)) {
-    studyUtils.telemetry({ treatment: "doorhanger" });
+    const pingData = { treatment: "doorhanger" };
+    await studyUtils.telemetry(pingData);
+    await PingStorage.logPing(pingData);
     let panel = browserWindow.window.document.getElementById("share-button-panel");
     if (panel === null) { // create the panel
       panel = browserWindow.window.document.createElement("panel");
@@ -74,7 +80,7 @@ function doorhangerDoNothingTreatment(browserWindow, shareButton) {
   }
 }
 
-function doorhangerAskToAddTreatment(browserWindow, shareButton) {
+async function doorhangerAskToAddTreatment(browserWindow, shareButton) {
   // check to see if we can share the page and if the share button has not yet been added
   // if it ghas been added, we do not want to prompt to add
   if (currentPageIsShareable(browserWindow) && shareButton === null) {
@@ -87,7 +93,7 @@ function doorhangerAskToAddTreatment(browserWindow, shareButton) {
       panel.setAttribute("noautofocus", true);
       panel.setAttribute("level", "parent");
 
-      panel.addEventListener("click", (e) => {
+      panel.addEventListener("click", () => {
         CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
         panel.hidePopup();
         highlightTreatment(browserWindow, browserWindow.shareButton);
@@ -106,7 +112,9 @@ function doorhangerAskToAddTreatment(browserWindow, shareButton) {
     const burgerMenu = browserWindow.window.document.getElementById("PanelUI-menu-button");
     if (burgerMenu !== null) {
       // only send the telemetry ping if we actually open the panel
-      studyUtils.telemetry({ treatment: "ask-to-add" });
+      const pingData = { treatment: "ask-to-add" };
+      await studyUtils.telemetry(pingData);
+      await PingStorage.logPing(pingData);
       panel.openPopup(burgerMenu, "bottomcenter topright", 0, 0, false, false);
     }
   } else if (shareButtonIsUseable(shareButton)) {
@@ -114,12 +122,14 @@ function doorhangerAskToAddTreatment(browserWindow, shareButton) {
   }
 }
 
-function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
+async function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
   // TODO do not re-add to toolbar if user removed manually?
 
   // check to see if the page will be shareable after adding the button to the toolbar
   if (currentPageIsShareable(browserWindow) && !shareButtonIsUseable(shareButton)) {
-    studyUtils.telemetry({ treatment: "add-to-toolbar" });
+    const pingData = { treatment: "add-to-toolbar" };
+    await studyUtils.telemetry(pingData);
+    await PingStorage.logPing(pingData);
     CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
     // need to get using browserWindow.shareButton because the shareButton argument
     // was initialized before the button was added
@@ -171,42 +181,45 @@ class CopyController {
 
   supportsCommand(cmd) { return cmd === "cmd_copy" || cmd === "share-button-study"; }
 
-  isCommandEnabled(cmd) { return true; }
+  isCommandEnabled() { return true; }
 
-  doCommand(cmd) {
+  async doCommand(cmd) {
     if (cmd === "cmd_copy") {
-      studyUtils.telemetry({ event: "copy" });
+      // Iterate over all other controllers and call doCommand on the first controller
+      // that supports it
+      // Skip until we reach the controller that we inserted
+      let i = 0;
+      const urlInput = this.browserWindow.urlInput;
+
+      for (; i < urlInput.controllers.getControllerCount(); i++) {
+        const curController = urlInput.controllers.getControllerAt(i);
+        if (curController.supportsCommand("share-button-study")) {
+          i += 1;
+          break;
+        }
+      }
+      for (; i < urlInput.controllers.getControllerCount(); i++) {
+        const curController = urlInput.controllers.getControllerAt(i);
+        if (curController.supportsCommand(cmd)) {
+          curController.doCommand(cmd);
+          break;
+        }
+      }
+
+      const pingData = { event: "copy" };
+      await studyUtils.telemetry(pingData);
+      await PingStorage.logPing(pingData);
       const shareButton = this.browserWindow.shareButton;
       // check to see if we should call a treatment at all
       const numberOfTimeShown = Preferences.get(COUNTER_PREF, 0);
       if (numberOfTimeShown < MAX_TIMES_TO_SHOW) {
         Preferences.set(COUNTER_PREF, numberOfTimeShown + 1);
-        TREATMENTS[this.treatment](this.browserWindow, shareButton);
-      }
-    }
-    // Iterate over all other controllers and call doCommand on the first controller
-    // that supports it
-    // Skip until we reach the controller that we inserted
-    let i = 0;
-    const urlInput = this.browserWindow.urlInput;
-
-    for (; i < urlInput.controllers.getControllerCount(); i++) {
-      const curController = urlInput.controllers.getControllerAt(i);
-      if (curController.supportsCommand("share-button-study")) {
-        i += 1;
-        break;
-      }
-    }
-    for (; i < urlInput.controllers.getControllerCount(); i++) {
-      const curController = urlInput.controllers.getControllerAt(i);
-      if (curController.supportsCommand(cmd)) {
-        curController.doCommand(cmd);
-        break;
+        await TREATMENTS[this.treatment](this.browserWindow, shareButton);
       }
     }
   }
 
-  onEvent(e) {}
+  onEvent() {}
 }
 
 class BrowserWindow {
@@ -246,7 +259,7 @@ class BrowserWindow {
     this.urlInput.controllers.removeController(this.copyController);
   }
 
-  animationEndListener(e) {
+  animationEndListener() {
     // When the animation is done, we want to remove the CSS class
     // so that we can add the class again upon the next copy and
     // replay the animation
@@ -328,7 +341,7 @@ class BrowserWindow {
 
 // see https://dxr.mozilla.org/mozilla-central/rev/53477d584130945864c4491632f88da437353356/xpfe/appshell/nsIWindowMediatorListener.idl
 const windowListener = {
-  onWindowTitleChange(window, title) { },
+  onWindowTitleChange() { },
   onOpenWindow(xulWindow) {
     // xulWindow is of type nsIXULWindow, we want an nsIDOMWindow
     // see https://dxr.mozilla.org/mozilla-central/rev/53477d584130945864c4491632f88da437353356/browser/base/content/test/general/browser_fullscreen-window-open.js#316
@@ -338,7 +351,7 @@ const windowListener = {
 
     // we need to use a listener function so that it's injected
     // once the window is loaded / ready
-    const onWindowOpen = (e) => {
+    const onWindowOpen = () => {
       domWindow.removeEventListener("load", onWindowOpen);
       const browserWindow = new BrowserWindow(domWindow);
       browserWindow.startup();
@@ -346,10 +359,10 @@ const windowListener = {
 
     domWindow.addEventListener("load", onWindowOpen, true);
   },
-  onCloseWindow(window) { },
+  onCloseWindow() { },
 };
 
-this.install = function(data, reason) {};
+this.install = function() {};
 
 this.startup = async function(data, reason) {
   studyUtils.setup({
@@ -392,16 +405,19 @@ this.startup = async function(data, reason) {
   Services.wm.addListener(windowListener);
 };
 
-this.shutdown = function(data, reason) {
+this.shutdown = async function(data, reason) {
   // remove event listener for new windows before processing WeakMap
   // to avoid race conditions (ie. new window added during shutdown)
   Services.wm.removeListener(windowListener);
 
+  // for use in summary ping
+  let hasShareButton = false;
   const windowEnumerator = Services.wm.getEnumerator("navigator:browser");
   while (windowEnumerator.hasMoreElements()) {
     const window = windowEnumerator.getNext();
     if (browserWindowWeakMap.has(window)) {
       const browserWindow = browserWindowWeakMap.get(window);
+      if (browserWindow.shareButton !== null) { hasShareButton = true; }
       browserWindow.shutdown();
     }
   }
@@ -411,8 +427,25 @@ this.shutdown = function(data, reason) {
   // are we uninstalling?
   // if so, user or automatic?
   if (reason === REASONS.ADDON_UNINSTALL || reason === REASONS.ADDON_DISABLE) {
-    // reset the preference in case of uninstall or disable
+    // reset the preference
+    // this will delete it since there is no value in the default branch
     Preferences.reset(COUNTER_PREF);
+
+    // send summary ping
+    const allPings = await PingStorage.getAllPings();
+    await PingStorage.clear();
+    await PingStorage.close();
+    // transform every value into string, such that we satisfy string -> string map from schema
+    // note: prefer .toString() over JSON.stringify() when possible to minimize strange formatting
+    const summaryPingData = {
+      hasShareButton: hasShareButton.toString(),
+      numberOfTimesURLBarCopied: allPings.filter(ping => ping.event === "copy").length.toString(),
+      numberOfShareButtonClicks: Services.telemetry.getHistogramById("SOCIAL_TOOLBAR_BUTTONS").snapshot().counts[0].toString(),
+      numberOfSharePanelClicks: Services.telemetry.getHistogramById("SOCIAL_PANEL_CLICKS").snapshot().counts[0].toString(),
+      summary: JSON.stringify(allPings),
+    };
+    await studyUtils.telemetry(summaryPingData);
+
     if (!studyUtils._isEnding) {
       // we are the first requestors, must be user action.
       studyUtils.endStudy({ reason: "user-disable" });
@@ -420,4 +453,4 @@ this.shutdown = function(data, reason) {
   }
 };
 
-this.uninstall = function(data, reason) {};
+this.uninstall = function() {};
