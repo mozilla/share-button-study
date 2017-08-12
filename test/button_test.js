@@ -563,6 +563,22 @@ describe("DoorhangerAskToAdd Treatment Tests", function() {
     assert(await utils.promiseAddonButton(driver));
   });
 
+  it("should not show the ask panel after the button was added once", async() => {
+    await utils.gotoURL(driver, MOZILLA_ORG);
+    await utils.copyUrlBar(driver);
+
+    const askPanel = driver.wait(until.elementLocated(
+      By.id("share-button-ask-panel")), 1000);
+    await askPanel.click();
+    assert(await utils.promiseAddonButton(driver));
+
+    assert(await utils.removeShareButton(driver));
+
+    await utils.copyUrlBar(driver);
+    const panelOpened = await utils.testPanel(driver, "share-button-ask-panel");
+    assert(!panelOpened);
+  });
+
   it("should send ask-to-add and copy telemetry pings", async() => {
     await utils.addShareButton(driver);
     await utils.gotoURL(driver, MOZILLA_ORG);

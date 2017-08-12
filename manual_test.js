@@ -26,7 +26,7 @@ const Context = firefox.Context;
         Preferences.set("extensions.sharebuttonstudy.treatment", typeArg);
       }
       callback();
-    }, null);
+    }, "doorhangerAskToAdd");
     // install the addon
     await utils.installAddon(driver);
 
