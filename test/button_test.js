@@ -112,11 +112,17 @@ async function postTestReset(driver) {
   // close the popup
   await utils.closePanel(driver);
   // reset the counter pref to 0 so that the treatment is always shown
-  await driver.executeAsyncScript((callback) => {
+  // reset the addedBool pref
+  await driver.executeAsyncScript((...args) => {
+    const callback = args[args.length - 1];
     Components.utils.import("resource://gre/modules/Preferences.jsm");
     const COUNTER_PREF = "extensions.sharebuttonstudy.counter";
+    const ADDED_BOOL_PREF = "extensions.sharebuttonstudy.addedBool";
     if (Preferences.has(COUNTER_PREF)) {
       Preferences.set(COUNTER_PREF, 0);
+    }
+    if (Preferences.has(ADDED_BOOL_PREF)) {
+      Preferences.set(ADDED_BOOL_PREF, 0);
     }
     callback();
   });

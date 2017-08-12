@@ -88,7 +88,6 @@ module.exports.removeShareButton = async(driver) => {
     return shareButton === null;
   } catch (e) {
     if (e.name === "TimeoutError") {
-      console.log(e);
       return false;
     }
     throw (e);
