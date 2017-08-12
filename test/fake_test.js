@@ -3,14 +3,14 @@
 const assert = require("assert");
 const utils = require("./utils");
 
-/* describe("Simple Fake Tests", () => {
+describe.only("Simple Fake Tests", () => {
   it("should pass", () => {
     assert(true);
   });
   it("should fail", () => {
     assert(false);
   });
-}); */
+});
 
 describe("Fake Tests", function() {
   // This gives Firefox time to start, and us a bit longer during some of the tests.
