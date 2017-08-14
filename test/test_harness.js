@@ -1,4 +1,6 @@
 /* eslint-env node */
+/* eslint no-console: "off" */
+
 /* This is a test harness for repeating the test suite many times
  * in order to determine which tests are inconsistent and fail then
  * most.
@@ -9,7 +11,7 @@ const { spawn } = require("child_process");
 
 // Promise wrapper around childProcess.spawn()
 function spawnProcess(command, args) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const childProcess = spawn(command, args);
     const stderrArray = [];
     const stdoutArray = [];
@@ -49,6 +51,7 @@ async function main() {
 
     // TODO Promise.all() will reject upon a single error, is this an issue?
     try {
+      // eslint-disable-next-line no-await-in-loop
       const resolvedChildProcesses = await Promise.all(childProcesses);
       for (const resolvedChildProcess of resolvedChildProcesses) {
         // FIXME: extract only JSON test output
