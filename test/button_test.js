@@ -673,17 +673,36 @@ describe("New Window Add-on Functional Tests", function() {
     await utils.installAddon(driver);
     // add the share-button to the toolbar
     await utils.addShareButton(driver);
-
-    // open a new window and switch to it this will test
-    // the new window listener since this window was opened
-    // *after* the addon was installed
-    await utils.openWindow(driver);
   });
 
-  after(async() => driver.quit());
+  // after(async() => driver.quit());
 
   afterEach(async() => postTestReset(driver));
 
-  it("animation should trigger on regular page", async() =>
-    assert(await animationTest(driver, MOZILLA_ORG)));
+  it("animation should trigger on regular page", async() => {
+    // cf. http://searchfox.org/mozilla-central/rev/e5b13e6224dbe3182050cf442608c4cb6a8c5c55/browser/base/content/test/urlbar/browser_bug556061.js#36
+    // TODO wrap in driver.wait() for timeout
+    await driver.executeAsyncScript((callback) => {
+      // open new window
+      const DDG = "https://duckduckgo.com/";
+      window.open(DDG);
+
+      const windowEnumerator = Services.wm.getEnumerator("navigator:browser");
+      while (windowEnumerator.hasMoreElements()) {
+        const xulWindow = windowEnumerator.getNext();
+        xulWindow.document.addEventListener("load", function() {
+          console.log("Page Loaded!");
+          const urlBar = xulWindow.document.getElementById("urlbar");
+          console.log(urlBar.value, urlBar.value === DDG);
+          if (urlBar.value === DDG) {
+            urlBar.focus();
+            urlBar.select();
+            goDoCommand("cmd_copy");
+            callback();
+          }
+        }, true);
+      }
+    });
+    console.log(await clipboardy.read());
+  });
 });
