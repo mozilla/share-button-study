@@ -186,12 +186,12 @@ class CopyController {
     this.treatment = studyUtils.getVariation().name;
   }
 
-  supportsCommand(cmd) { return cmd === "cmd_copy" || cmd === "share-button-study"; }
+  supportsCommand(cmd) { return cmd === "cmd_copy" || cmd === "cmd_cut" || cmd === "share-button-study"; }
 
   isCommandEnabled() { return true; }
 
   async doCommand(cmd) {
-    if (cmd === "cmd_copy") {
+    if (cmd === "cmd_copy" || cmd === "cmd_cut") {
       // Iterate over all other controllers and call doCommand on the first controller
       // that supports it
       // Skip until we reach the controller that we inserted
