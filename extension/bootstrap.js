@@ -42,8 +42,11 @@ function shareButtonIsUseable(shareButton) {
     shareButton.getAttribute("overflowedItem") !== "true"; // but not in the overflow menu"
 }
 
-async function highlightTreatment(browserWindow, shareButton) {
+async function highlightTreatment(browserWindow, shareButton, incrementCounter = true) {
   if (shareButtonIsUseable(shareButton)) {
+    if (incrementCounter) {
+      Preferences.set(COUNTER_PREF, Preferences.get(COUNTER_PREF, 0) + 1);
+    }
     const pingData = { treatment: "highlight" };
     await studyUtils.telemetry(pingData);
     await PingStorage.logPing(pingData);
@@ -53,8 +56,11 @@ async function highlightTreatment(browserWindow, shareButton) {
   }
 }
 
-async function doorhangerDoNothingTreatment(browserWindow, shareButton) {
+async function doorhangerDoNothingTreatment(browserWindow, shareButton, incrementCounter = true) {
   if (shareButtonIsUseable(shareButton)) {
+    if (incrementCounter) {
+      Preferences.set(COUNTER_PREF, Preferences.get(COUNTER_PREF, 0) + 1);
+    }
     const pingData = { treatment: "doorhanger" };
     await studyUtils.telemetry(pingData);
     await PingStorage.logPing(pingData);
@@ -85,6 +91,8 @@ async function doorhangerAskToAddTreatment(browserWindow, shareButton) {
   // Do not re-add to toolbar if user removed manually
   if (Preferences.get(ADDED_BOOL_PREF, false)) { return; }
 
+  Preferences.set(COUNTER_PREF, Preferences.get(COUNTER_PREF, 0) + 1);
+
   // check to see if we can share the page and if the share button has not yet been added
   // if it has been added, we do not want to prompt to add
   if (currentPageIsShareable(browserWindow) && shareButton === null) {
@@ -100,7 +108,7 @@ async function doorhangerAskToAddTreatment(browserWindow, shareButton) {
       panel.addEventListener("click", () => {
         CustomizableUI.addWidgetToArea("social-share-button", CustomizableUI.AREA_NAVBAR);
         panel.hidePopup();
-        highlightTreatment(browserWindow, browserWindow.shareButton);
+        highlightTreatment(browserWindow, browserWindow.shareButton, false);
         Preferences.set(ADDED_BOOL_PREF, true);
       });
 
@@ -131,6 +139,8 @@ async function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
   // Do not re-add to toolbar if user removed manually
   if (Preferences.get(ADDED_BOOL_PREF, false)) { return; }
 
+  Preferences.set(COUNTER_PREF, Preferences.get(COUNTER_PREF, 0) + 1);
+
   // check to see if the page will be shareable after adding the button to the toolbar
   if (currentPageIsShareable(browserWindow) && !shareButtonIsUseable(shareButton)) {
     const pingData = { treatment: "add-to-toolbar" };
@@ -141,7 +151,7 @@ async function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
     // need to get using browserWindow.shareButton because the shareButton argument
     // was initialized before the button was added
   }
-  doorhangerDoNothingTreatment(browserWindow, browserWindow.shareButton);
+  doorhangerDoNothingTreatment(browserWindow, browserWindow.shareButton, false);
 }
 
 // define treatments as STRING: fn(browserWindow, shareButton)
@@ -220,7 +230,6 @@ class CopyController {
       // check to see if we should call a treatment at all
       const numberOfTimeShown = Preferences.get(COUNTER_PREF, 0);
       if (numberOfTimeShown < MAX_TIMES_TO_SHOW) {
-        Preferences.set(COUNTER_PREF, numberOfTimeShown + 1);
         await TREATMENTS[this.treatment](this.browserWindow, shareButton);
       }
     }
