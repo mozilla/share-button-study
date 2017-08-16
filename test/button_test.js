@@ -346,6 +346,7 @@ describe("Summary Ping Tests", function() {
     await utils.copyUrlBar(driver);
     await new Promise(resolve => setTimeout(resolve, 100)); // wait in between copy events
     await utils.copyUrlBar(driver);
+    await new Promise(resolve => setTimeout(resolve, 100)); // wait in between copy events
     await utils.uninstallAddon(driver, addonId);
     // hacky workaround to wait until the summary ping is sent
     await new Promise(resolve => setTimeout(resolve, 1000));
