@@ -342,7 +342,9 @@ describe("Summary Ping Tests", function() {
 
   it("should report the correct number of URL copy events", async() => {
     await utils.copyUrlBar(driver);
+    await new Promise(resolve => setTimeout(resolve, 100)); // wait in between copy events
     await utils.copyUrlBar(driver);
+    await new Promise(resolve => setTimeout(resolve, 100)); // wait in between copy events
     await utils.copyUrlBar(driver);
     await utils.uninstallAddon(driver, addonId);
     // hacky workaround to wait until the summary ping is sent
@@ -357,7 +359,8 @@ describe("Summary Ping Tests", function() {
     assert(urlBarCopies === 3, `Expected 3 urlBarCopies, instead urlBarCopies = ${urlBarCopies}`);
   });
 
-  it("should report the correct number of share button clicks", async() => {
+  // NOTE This is simply testing built-in Firefox Telemetry pings.
+  /* it("should report the correct number of share button clicks", async() => {
     await utils.addShareButton(driver);
     await utils.gotoURL(driver, MOZILLA_ORG);
     const shareButton = await utils.promiseAddonButton(driver);
@@ -375,10 +378,12 @@ describe("Summary Ping Tests", function() {
     assert(foundPings.length > 0);
     const shareButtonClicks = JSON.parse(foundPings[0].payload.data.attributes
       .numberOfShareButtonClicks);
-    assert(shareButtonClicks === 2, `Expected 2 shareButtonClicks, instead shareButtonClicks = ${shareButtonClicks}`);
-  });
+    assert(shareButtonClicks === 2,
+      `Expected 2 shareButtonClicks, instead shareButtonClicks = ${shareButtonClicks}`);
+  }); */
 
-  it("should report the correct number of share panel clicks", async() => {
+  // NOTE This is simply testing built-in Firefox Telemetry pings.
+  /* it("should report the correct number of share panel clicks", async() => {
     await utils.addShareButton(driver);
     await utils.gotoURL(driver, MOZILLA_ORG);
     const shareButton = await utils.promiseAddonButton(driver);
@@ -403,8 +408,9 @@ describe("Summary Ping Tests", function() {
     assert(foundPings.length > 0);
     const sharePanelClicks = JSON.parse(foundPings[0].payload.data.attributes
       .numberOfSharePanelClicks);
-    assert(sharePanelClicks === 4, `Expected 4 sharePanelClicks, instead sharePanelClicks = ${sharePanelClicks}`);
-  });
+    assert(sharePanelClicks === 4,
+      `Expected 4 sharePanelClicks, instead sharePanelClicks = ${sharePanelClicks}`);
+  }); */
 
   it("should log a summary ping for highlight treatment", async() => {
     await summaryFieldTest(driver, addonId, "highlight");
