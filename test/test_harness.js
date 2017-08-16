@@ -39,10 +39,7 @@ async function main() {
     console.log(`Currently running test suite #${i}.`);
     const childProcesses = [];
     // NOTE Parallel tests seem to introduce more errors.
-    childProcesses.push(spawnProcess("npm", [
-      "run", "--silent", "test", "--",
-      "--grep", "Summary Ping Tests", "--reporter", "json",
-    ]));
+    childProcesses.push(spawnProcess("npm", ["run", "--silent", "test", "--", "--reporter", "json"]));
 
     // TODO Promise.all() will reject upon a single error, is this an issue?
     try {
