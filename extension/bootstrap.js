@@ -322,6 +322,10 @@ class BrowserWindow {
 
     // insert the copy controller to detect copying from URL bar
     this.insertCopyController();
+
+    // Emit notification that the code has been injected
+    // This is for testing purposes.
+    Services.obs.notifyObservers(null, "share-button-study-init-complete");
   }
 
   shutdown() {

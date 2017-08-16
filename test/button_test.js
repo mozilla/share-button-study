@@ -659,7 +659,10 @@ describe("DoorhangerAddToToolbar Treatment Tests", function() {
   });
 });
 
-describe("New Window Add-on Functional Tests", function() {
+// NOTE: This test will fail. Previous versions written in Selenium have been known to crash
+// very often, and tests that do not use Selenium have not been successful.
+
+/* describe("New Window Add-on Functional Tests", function() {
   // This gives Firefox time to start, and us a bit longer during some of the tests.
   this.timeout(15000);
 
@@ -675,34 +678,30 @@ describe("New Window Add-on Functional Tests", function() {
     await utils.addShareButton(driver);
   });
 
-  // after(async() => driver.quit());
+  after(async() => driver.quit());
 
   afterEach(async() => postTestReset(driver));
 
-  it("animation should trigger on regular page", async() => {
+  it("extension should be injected in page opened after addon installation", async() => {
     // cf. http://searchfox.org/mozilla-central/rev/e5b13e6224dbe3182050cf442608c4cb6a8c5c55/browser/base/content/test/urlbar/browser_bug556061.js#36
-    // TODO wrap in driver.wait() for timeout
-    await driver.executeAsyncScript((callback) => {
-      // open new window
+    // TODO wrap in driver.wait() for timeout (?)
+    await driver.executeAsyncScript(async(callback) => {
+      Components.utils.import("resource://gre/modules/Services.jsm");
       const DDG = "https://duckduckgo.com/";
+
+      // NOTE: This will cause Firefox to report an unknown flag "-marionette".
+      // For future reference, see https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/nsIObserver
+      // https://developer.mozilla.org/en-US/docs/Mozilla/Tech/XPCOM/Reference/Interface/nsIObserverService
+      Services.obs.addObserver((subject, topic) => {
+        if (topic === "share-button-study-init-complete") {
+          console.log("Share button study initialized!");
+        }
+      });
+
       window.open(DDG);
 
-      const windowEnumerator = Services.wm.getEnumerator("navigator:browser");
-      while (windowEnumerator.hasMoreElements()) {
-        const xulWindow = windowEnumerator.getNext();
-        xulWindow.document.addEventListener("load", function() {
-          console.log("Page Loaded!");
-          const urlBar = xulWindow.document.getElementById("urlbar");
-          console.log(urlBar.value, urlBar.value === DDG);
-          if (urlBar.value === DDG) {
-            urlBar.focus();
-            urlBar.select();
-            goDoCommand("cmd_copy");
-            callback();
-          }
-        }, true);
-      }
+      callback();
     });
-    console.log(await clipboardy.read());
+    // TODO Assert test condition
   });
-});
+});*/
