@@ -5,7 +5,6 @@
  * in order to determine which tests are inconsistent and fail then
  * most.
  */
-const os = require("os");
 const fs = require("fs");
 const { spawn } = require("child_process");
 
@@ -16,7 +15,8 @@ function spawnProcess(command, args) {
     const stderrArray = [];
     const stdoutArray = [];
 
-    childProcess.stdout.on("data", (data) => {stdoutArray.push(data.toString()); // data is of type Buffer
+    childProcess.stdout.on("data", (data) => {
+      stdoutArray.push(data.toString()); // data is of type Buffer
     });
 
     childProcess.stderr.on("data", (data) => {
@@ -35,14 +35,11 @@ function spawnProcess(command, args) {
 async function main() {
   const failedTestCounts = new Map();
 
-  for (let i = 0; i < 32; i++) {
+  for (let i = 0; i < 10; i++) {
     console.log(`Currently running test suite #${i}.`);
     const childProcesses = [];
     // NOTE Parallel tests seem to introduce more errors.
-    childProcesses.push(spawnProcess("npm", [
-      "run", "--silent", "test", "--",
-      "--grep", "should report the correct number of URL copy events", "--reporter", "json",
-    ]));
+    childProcesses.push(spawnProcess("npm", ["run", "--silent", "test", "--", "--reporter", "json"]));
 
     // TODO Promise.all() will reject upon a single error, is this an issue?
     try {
