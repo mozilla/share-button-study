@@ -122,7 +122,7 @@ async function postTestReset(driver) {
       Preferences.set(COUNTER_PREF, 0);
     }
     if (Preferences.has(ADDED_BOOL_PREF)) {
-      Preferences.set(ADDED_BOOL_PREF, 0);
+      Preferences.set(ADDED_BOOL_PREF, false);
     }
     callback();
   });
@@ -359,59 +359,6 @@ describe("Summary Ping Tests", function() {
       .numberOfTimesURLBarCopied);
     assert(urlBarCopies === 3, `Expected 3 urlBarCopies, instead urlBarCopies = ${urlBarCopies}`);
   });
-
-  // NOTE This is simply testing built-in Firefox Telemetry pings.
-  /* it("should report the correct number of share button clicks", async() => {
-    await utils.addShareButton(driver);
-    await utils.gotoURL(driver, MOZILLA_ORG);
-    const shareButton = await utils.promiseAddonButton(driver);
-    await shareButton.click();
-    await utils.testPanel(driver, "social-share-panel");
-    await utils.closePanel(driver, shareButton);
-    await shareButton.click();
-    await utils.uninstallAddon(driver, addonId);
-    // hacky workaround to wait until the summary ping is sent
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
-    const foundPings = utils.searchTelemetry(
-      [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
-      pings);
-    assert(foundPings.length > 0);
-    const shareButtonClicks = JSON.parse(foundPings[0].payload.data.attributes
-      .numberOfShareButtonClicks);
-    assert(shareButtonClicks === 2,
-      `Expected 2 shareButtonClicks, instead shareButtonClicks = ${shareButtonClicks}`);
-  }); */
-
-  // NOTE This is simply testing built-in Firefox Telemetry pings.
-  /* it("should report the correct number of share panel clicks", async() => {
-    await utils.addShareButton(driver);
-    await utils.gotoURL(driver, MOZILLA_ORG);
-    const shareButton = await utils.promiseAddonButton(driver);
-    await shareButton.click();
-
-    const sharePanel = await driver.wait(until.elementLocated(
-      By.className("social-share-frame")), 1000);
-    await utils.testPanel(driver, "social-share-panel");
-    await sharePanel.click();
-    await sharePanel.click();
-    await sharePanel.click();
-    await sharePanel.click();
-    await utils.closePanel(driver, sharePanel);
-
-    await utils.uninstallAddon(driver, addonId);
-    // hacky workaround to wait until the summary ping is sent
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const pings = await utils.getMostRecentPingsByType(driver, "shield-study-addon");
-    const foundPings = utils.searchTelemetry(
-      [ping => Object.hasOwnProperty.call(ping.payload.data.attributes, "summary")],
-      pings);
-    assert(foundPings.length > 0);
-    const sharePanelClicks = JSON.parse(foundPings[0].payload.data.attributes
-      .numberOfSharePanelClicks);
-    assert(sharePanelClicks === 4,
-      `Expected 4 sharePanelClicks, instead sharePanelClicks = ${sharePanelClicks}`);
-  }); */
 
   it("should log a summary ping for highlight treatment", async() => {
     await summaryFieldTest(driver, addonId, "highlight");

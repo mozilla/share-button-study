@@ -66,7 +66,7 @@ this.PingStorage = {
   async getAllPings() {
     const db = await getDatabase();
     const allDBPings = await getStore(db).getAll();
-    // TODO return union of allDBPings and IN_MEMORY_PINGS
+    // Return union of allDBPings and IN_MEMORY_PINGS
     const union = [...allDBPings];
     for (const ping of IN_MEMORY_PINGS) {
       const searchIndex = allDBPings.findIndex(dbPing => pingCompare(dbPing, ping));
