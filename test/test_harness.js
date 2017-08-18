@@ -33,13 +33,15 @@ function spawnProcess(command, args) {
 }
 
 async function main() {
-  const failedTestCounts = new Map();
+  // Build the .xpi file for the extension once for all tests
+  await spawnProcess("npm", ["run", "--silent", "build"]);
 
+  const failedTestCounts = new Map();
   for (let i = 0; i < 10; i++) {
     console.log(`Currently running test suite #${i}.`);
     const childProcesses = [];
     // NOTE Parallel tests seem to introduce more errors.
-    childProcesses.push(spawnProcess("npm", ["run", "--silent", "test", "--", "--reporter", "json"]));
+    childProcesses.push(spawnProcess("npm", ["run", "--silent", "harness_test"]));
 
     // TODO Promise.all() will reject upon a single error, is this an issue?
     try {
