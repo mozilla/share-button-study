@@ -1,4 +1,4 @@
-const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
+const { utils: Cu } = Components;
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 XPCOMUtils.defineLazyModuleGetter(this, "IndexedDB", "resource://gre/modules/IndexedDB.jsm");
 
@@ -9,6 +9,7 @@ const DB_OPTIONS = {
   version: 1,
   storage: "persistent",
 };
+const IN_MEMORY_PINGS = [];
 
 /**
  * Cache the database connection so that it is shared among multiple operations.
@@ -39,6 +40,14 @@ function getStore(db) {
   return db.objectStore(DB_NAME, "readwrite");
 }
 
+function pingCompare(ping1, ping2) {
+  // pingData only includes one property: treatment or event
+  const key1 = Object.keys(ping1)[0];
+  const key2 = Object.keys(ping2)[0];
+
+  return key1 === key2 && (ping1[key1] === ping2[key2]);
+}
+
 this.PingStorage = {
   async clear() {
     const db = await getDatabase();
@@ -56,12 +65,21 @@ this.PingStorage = {
 
   async getAllPings() {
     const db = await getDatabase();
-    return getStore(db).getAll();
+    const allDBPings = await getStore(db).getAll();
+    // Return union of allDBPings and IN_MEMORY_PINGS
+    const union = [...allDBPings];
+    for (const ping of IN_MEMORY_PINGS) {
+      const searchIndex = allDBPings.findIndex(dbPing => pingCompare(dbPing, ping));
+      if (searchIndex !== -1) { union.push(ping); }
+    }
+    return union;
   },
 
   async logPing(pingData) {
-    const db = await getDatabase();
     const ping = Object.assign({ timestamp: new Date() }, pingData);
+    IN_MEMORY_PINGS.push(ping);
+
+    const db = await getDatabase();
     return getStore(db).add(ping);
   },
 };
