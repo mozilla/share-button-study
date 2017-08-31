@@ -156,6 +156,7 @@ async function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
 
 // define treatments as STRING: fn(browserWindow, shareButton)
 const TREATMENTS = {
+  control: () => {},
   highlight:              highlightTreatment,
   doorhangerDoNothing:    doorhangerDoNothingTreatment,
   doorhangerAskToAdd:     doorhangerAskToAddTreatment,

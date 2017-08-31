@@ -10,6 +10,7 @@ const config = {
       { name: "doorhangerAskToAdd", weight: 1 },
       { name: "doorhangerAddToToolbar", weight: 1 },
       { name: "highlight", weight: 1 },
+      { name: "control", weight: 1 },
     ],
     /** **endings**
       * - keys indicate the 'endStudy' even that opens these.
