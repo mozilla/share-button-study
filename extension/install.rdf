@@ -6,7 +6,7 @@
     <em:type>2</em:type>
     <em:bootstrap>true</em:bootstrap>
     <em:unpack>false</em:unpack>
-    <em:version>1.0.0</em:version>
+    <em:version>1.0.1</em:version>
     <em:name>Share Button Study</em:name>
     <em:description>Highlights the share button when the user copies a URL from the location bar.</em:description>
     <em:multiprocessCompatible>true</em:multiprocessCompatible>
