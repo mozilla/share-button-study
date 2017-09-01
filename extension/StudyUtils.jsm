@@ -914,8 +914,8 @@ function createLog(name, levelWord) {
   Cu.import("resource://gre/modules/Log.jsm");
   var L = Log.repository.getLogger(name);
   L.addAppender(new Log.ConsoleAppender(new Log.BasicFormatter()));
-  L.debug("log made", name, levelWord, Log.Level[levelWord]);
   L.level = Log.Level[levelWord] || Log.Level.Debug; // should be a config / pref
+  L.debug("log made", name, levelWord, Log.Level[levelWord]);
   return L;
 }
 /** addon state change reasons */
