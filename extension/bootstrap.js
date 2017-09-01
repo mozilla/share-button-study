@@ -387,12 +387,9 @@ this.install = function() {};
 
 this.startup = async function(data, reason) {
   studyUtils.setup({
-    studyName: config.study.studyName,
-    endings: config.study.endings,
+    ...config,
     addon: { id: data.id, version: data.version },
-    telemetry: config.study.telemetry,
   });
-  studyUtils.setLoggingLevel(config.log.studyUtils.level);
   const variation = await chooseVariation();
   studyUtils.setVariation(variation);
 

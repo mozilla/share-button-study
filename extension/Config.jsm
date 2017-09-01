@@ -4,7 +4,6 @@ const EXPORTED_SYMBOLS = ["config"];
 const config = {
   study: {
     studyName: "share-button-study", // no spaces, for all the reasons
-    variation: { }, // optional, use to override/decide;
     weightedVariations: [
       { name: "doorhangerDoNothing", weight: 1 },
       { name: "doorhangerAskToAdd", weight: 1 },
@@ -43,10 +42,10 @@ const config = {
   log: {
     // Fatal: 70, Error: 60, Warn: 50, Info: 40, Config: 30, Debug: 20, Trace: 10, All: -1,
     bootstrap:  {
-      level: "Debug",
+      level: "Warn",
     },
     studyUtils:  {
-      level: "Trace",
+      level: "Warn",
     },
   },
 };
