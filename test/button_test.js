@@ -7,8 +7,10 @@ const assert = require("assert");
 const utils = require("./utils");
 const clipboardy = require("clipboardy");
 const webdriver = require("selenium-webdriver");
+const firefox = require("selenium-webdriver/firefox");
 
 const By = webdriver.By;
+const Context = firefox.Context;
 const until = webdriver.until;
 const MAX_TIMES_TO_SHOW = 5; // this must match MAX_TIMES_TO_SHOW in bootstrap.js
 const MOZILLA_ORG = "http://mozilla.org";
@@ -610,6 +612,56 @@ describe("DoorhangerAddToToolbar Treatment Tests", function() {
       ping => ping.payload.data.attributes.event === "copy",
     ], pings);
     assert(foundPings.length > 0);
+  });
+});
+
+describe("Expiration date tests", function() {
+  // This gives Firefox time to start, and us a bit longer during some of the tests.
+  this.timeout(15000);
+
+  let driver;
+
+  before(async() => {
+    driver = await utils.promiseSetupDriver();
+    // set expiration date to a date sufficiently in the past to trigger expiration
+    const now = new Date(Date.now());
+    const expiredDateString = new Date(now.setDate(now.getDate() - 30)).toISOString();
+    await driver.executeAsyncScript((dateStringArg, callback) => {
+      Components.utils.import("resource://gre/modules/Preferences.jsm");
+      Preferences.set("extensions.sharebuttonstudy.expirationDateString", dateStringArg);
+      callback();
+    }, expiredDateString);
+    // install the addon
+    await utils.installAddon(driver);
+  });
+
+  after(async() => driver.quit());
+
+  it("should open a new tab", async() => {
+    const newTabOpened = await driver.wait(async() => {
+      const handles = await driver.getAllWindowHandles();
+      return handles.length === 2; // opened a new tab
+    }, 3000);
+    assert(newTabOpened);
+  });
+
+  it("should open a new tab to the correct URL", async() => {
+    const currentHandle = await driver.getWindowHandle();
+    driver.setContext(Context.CONTENT);
+    // Find the new window handle.
+    let newWindowHandle = null;
+    const handles = await driver.getAllWindowHandles();
+    for (const handle of handles) {
+      if (handle !== currentHandle) {
+        newWindowHandle = handle;
+      }
+    }
+    const correctURLOpened = await driver.wait(async() => {
+      await driver.switchTo().window(newWindowHandle);
+      const currentURL = await driver.getCurrentUrl();
+      return currentURL.startsWith("https://qsurvey.mozilla.com/s3/sharing-study");
+    });
+    assert(correctURLOpened);
   });
 });
 

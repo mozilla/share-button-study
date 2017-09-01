@@ -25,6 +25,7 @@ const REASONS = {
 const COUNTER_PREF = "extensions.sharebuttonstudy.counter";
 const TREATMENT_OVERRIDE_PREF = "extensions.sharebuttonstudy.treatment";
 const ADDED_BOOL_PREF = "extensions.sharebuttonstudy.addedBool";
+const EXPIRATION_DATE_STRING_PREF = "extensions.sharebuttonstudy.expirationDateString";
 const MAX_TIMES_TO_SHOW = 5;
 const SHAREBUTTON_CSS_URI = Services.io.newURI("resource://share-button-study/share_button.css");
 const PANEL_CSS_URI = Services.io.newURI("resource://share-button-study/panel.css");
@@ -156,6 +157,7 @@ async function doorhangerAddToToolbarTreatment(browserWindow, shareButton) {
 
 // define treatments as STRING: fn(browserWindow, shareButton)
 const TREATMENTS = {
+  control: () => {},
   highlight:              highlightTreatment,
   doorhangerDoNothing:    doorhangerDoNothingTreatment,
   doorhangerAskToAdd:     doorhangerAskToAddTreatment,
@@ -386,16 +388,20 @@ this.install = function() {};
 
 this.startup = async function(data, reason) {
   studyUtils.setup({
-    studyName: config.study.studyName,
-    endings: config.study.endings,
+    ...config,
     addon: { id: data.id, version: data.version },
-    telemetry: config.study.telemetry,
   });
-  studyUtils.setLoggingLevel(config.log.studyUtils.level);
   const variation = await chooseVariation();
   studyUtils.setVariation(variation);
 
-  // TODO Import config.modules?
+  // Always set EXPIRATION_DATE_PREF if it not set, even if outside of install.
+  // This is a failsafe if opt-out expiration doesn't work, so should be resilient.
+  // Also helps for testing.
+  if (!Preferences.has(EXPIRATION_DATE_STRING_PREF)) {
+    const now = new Date(Date.now());
+    const expirationDateString = new Date(now.setDate(now.getDate() + 14)).toISOString();
+    Preferences.set(EXPIRATION_DATE_STRING_PREF, expirationDateString);
+  }
 
   if (reason === REASONS.ADDON_INSTALL) {
     // reset to counter to 0 primarily for testing purposes
@@ -412,8 +418,13 @@ this.startup = async function(data, reason) {
       return;
     }
   }
-  // sets experiment as active and sends installed telemetry
+  // sets experiment as active and sends installed telemetry upon first install
   await studyUtils.startup({ reason });
+
+  const expirationDate = new Date(Preferences.get(EXPIRATION_DATE_STRING_PREF));
+  if (Date.now() > expirationDate) {
+    studyUtils.endStudy({ reason: "expired" });
+  }
 
   // iterate over all open windows
   const windowEnumerator = Services.wm.getEnumerator("navigator:browser");
@@ -443,8 +454,6 @@ this.shutdown = async function(data, reason) {
       browserWindow.shutdown();
     }
   }
-
-  // TODO Unload modules?
 
   // are we uninstalling?
   // if so, user or automatic?
