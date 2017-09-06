@@ -1,32 +1,44 @@
 # Share Button Study
-The purpose of this extension is to visually highlight the share button in the browser toolbar when text from the URL bar is copied.
+![CircleCI badge](https://img.shields.io/circleci/project/github/marcrowo/share-button-study/master.svg?label=CircleCI)
 
-## Overview of extension
-See [Bootstrapped extensions](https://developer.mozilla.org/en-US/Add-ons/Bootstrapped_extensions) for more information.
+The purpose of this extension is to visually highlight the share button in the browser toolbar when text from the URL bar is copied, and to serve as a template for new Shield studies.
 
-### bootstrap.js
-MDN References [[1](https://developer.mozilla.org/en-US/docs/Extensions/bootstrap.js)] [[2](https://developer.mozilla.org/en-US/Add-ons/Bootstrapped_extensions#Bootstrap_entry_points)]
+## Overview
+The share button study is a bootstrapped extension. See [Bootstrapped extensions](https://developer.mozilla.org/en-US/Add-ons/Bootstrapped_extensions) for more information.
 
-`startup()` 
-1. Load the stylesheet for the share button animation.
-2. Add the controller that detects the copy event in the URL bar.
-3. Add an eventListener to the share button so that the CSS animation can be replayed.
+As a starting point, you may want to read through `extension/bootstrap.js`.
 
-`shutdown()`
-1. Remove the CSS.
-2. Remove the animation class from the share button.
-3. Remove the controller from the URL bar.
-4. Remove the eventListener from the share button.
+## Setup
 
-### chrome.manifest
-[MDN Reference](https://developer.mozilla.org/en-US/docs/Chrome_Registration)
+### Requirements
+- [yarn](https://yarnpkg.com)
+- Firefox version 55-56
 
-This file is used to include resources (ie. share\_button.css). It associates "resource://share-button-study" with the current directory.
+### Install dependencies
+The first step is to install dependencies with yarn by running `yarn install`. Yarn is used to ensure that all dependencies and their sub-dependencies are using the correct versions. If you do not use yarn, you may run into issues.
 
-### install.rdf
-[MDN Reference](https://developer.mozilla.org/en-US/Add-ons/Install_Manifests)
+### Install extension
 
-The install manifest includes information about the add-on such as the name, description, version number, etc.
+Once you have installed the dependencies, there are two main ways to add the extension to Firefox: manually or using the manual testing script.
 
-### share_button.css
-This file includes the animation that highlights the share button.
+#### Adding the extension manually
+1. Go to `about:debugging`.
+2. Click "Load Temporary Add-on".
+3. Select any file in the `/extension` folder.
+
+#### Using the manual testing script
+The manual testing script (`npm run man`) uses the environment variable `FIREFOX_BINARY` to determine which version of Firefox to use. For example, a macOS user might run:
+
+`export FIREFOX_BINARY='/Applications/Firefox Beta.app/Contents/MacOS/firefox' && npm run man`
+
+## Testing
+### Local testing
+Once again, you must set the `FIREFOX_BINARY` variable to be the path of the Firefox binary you wish to use.
+
+The functional test suite is run using `npm run test`.
+
+The test harness, which can be run using `node test/test_harness.js`, runs the test suite multiple times and records the outcome to determine which tests are inconsistent. This is useful for improving consistency of Selenium tests, which often have timing issues.
+
+### Docker container
+- `Dockerfile`: the Dockerfile used on CircleCI. Also available on [Docker Hub](https://hub.docker.com/r/marcrowo/share-button-study-base/tags/).
+- `docker_setup.sh`: Setup script for the Docker image to install dependencies etc. This is *not* used by CircleCI, which instead uses the CircleCI configuration files to install dependencies.
